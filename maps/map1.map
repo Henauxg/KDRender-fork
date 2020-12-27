@@ -1,0 +1,27 @@
+player
+{
+    start
+    {
+        position {0, -200}
+        direction {0}
+    }
+}
+
+sector
+{
+    outline
+    {
+        vertices {{-300, -300} {-300, 0} {-300, 300} {0, 300} {300, 300} {300, -300}}
+    }
+
+    hole
+    {
+        vertices {{-100, -100} {-100, 100} {100, 100} {100, -100}}
+    }
+
+    elevation
+    {
+        ceiling {100}
+        floor {0}
+    }
+}
