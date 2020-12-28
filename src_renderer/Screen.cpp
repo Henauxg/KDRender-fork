@@ -1,10 +1,12 @@
 #include "Screen.h"
 
 #include "Consts.h"
+#include "KDTreeRenderer.h"
 
 #include <iostream>
 
-Screen::Screen()
+Screen::Screen(const KDTreeRenderer &iRenderer) : 
+    m_Renderer(iRenderer)
 {
     _text.loadFromImage(_screenContent);
     _sprite.setTexture(_text, true);
@@ -17,7 +19,7 @@ void Screen::draw(sf::RenderTarget &target, sf::RenderStates states) const
 
 void Screen::refresh()
 {
-    const unsigned char *framebuffer = nullptr;
+    const unsigned char *framebuffer = m_Renderer.GetFrameBuffer();
 
     if (framebuffer)
     {

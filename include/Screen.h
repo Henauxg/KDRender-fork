@@ -9,10 +9,12 @@
 #include <SFML/Window/Event.hpp>
 #include <SFML/System.hpp>
 
+class KDTreeRenderer;
+
 class Screen : public sf::Drawable
 {
 public:
-    Screen();
+    Screen(const KDTreeRenderer &iRenderer);
 
     void refresh();
 
@@ -23,6 +25,9 @@ private:
     sf::Image _screenContent;
     sf::Texture _text;
     sf::Sprite _sprite;
+
+private:
+    const KDTreeRenderer &m_Renderer;
 };
 
 #endif

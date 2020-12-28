@@ -44,6 +44,12 @@ public:
     void Stream(char *&ioData, unsigned int &oNbBytesWritten) const;
     void UnStream(const char *ipData, unsigned int &oNbBytesRead);
 
+public:
+    SplitPlane GetSplitPlane() const { return m_SplitPlane; }
+    int GetSplitOffset() const { return m_SplitOffset; }
+    unsigned int GetNbOfWalls() const { return m_Walls.size(); }
+    const KDMapData::Wall &GetWall(unsigned int iWallIdx) const { return m_Walls[iWallIdx]; }
+
 protected:
     std::vector<KDMapData::Wall> m_Walls;
 
@@ -55,6 +61,7 @@ protected:
 
 private:
     friend class MapBuildData;
+    friend class KDTreeRenderer;
 };
 
 class KDTreeMap
@@ -67,15 +74,24 @@ public:
     void Stream(char *&oData, unsigned int &oNbBytesWritten) const;
     void UnStream(const char *ipData, unsigned int &oNbBytesRead);
 
+public:
+    int GetPlayerStartX() const;
+    int GetPlayerStartY() const;
+    int GetPlayerStartDirection() const;
+
 protected:
     unsigned int ComputeStreamSize() const;
 
 protected:
     std::vector<KDMapData::Sector> m_Sectors;
     KDTreeNode *m_RootNode;
+    int m_PlayerStartX;
+    int m_PlayerStartY;
+    int m_PlayerStartDirection;
 
 private:
     friend class MapBuildData;
+    friend class KDTreeRenderer;
 };
 
 #endif

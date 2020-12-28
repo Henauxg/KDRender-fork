@@ -120,9 +120,11 @@ protected:
 
 protected:
     std::vector<Sector> m_Sectors;
+    const Map::Data *m_pMapData;
 };
 
-MapBuildData::MapBuildData()
+MapBuildData::MapBuildData() : 
+    m_pMapData(nullptr)
 {
 }
 
@@ -133,12 +135,12 @@ MapBuildData::~MapBuildData()
 
 MapBuildData::ErrorCode MapBuildData::SetMap(const Map &iMap)
 {
-    const Map::Data &mapData(iMap.GetData());
-    for(unsigned int i = 0; i < mapData.m_Sectors.size(); i++)
+    m_pMapData = &iMap.GetData();
+    for (unsigned int i = 0; i < m_pMapData->m_Sectors.size(); i++)
     {
         MapBuildData::Sector sector;
-        
-        ErrorCode err = BuildSector(mapData.m_Sectors[i], sector);
+
+        ErrorCode err = BuildSector(m_pMapData->m_Sectors[i], sector);
         if(err != ErrorCode::OK)
             return err;
 
@@ -148,8 +150,8 @@ MapBuildData::ErrorCode MapBuildData::SetMap(const Map &iMap)
             mutableWall.m_InSector = i;
             mutableWall.m_OutSector = -1;
         }
-        sector.m_Ceiling = mapData.m_Sectors[i].m_Ceiling;
-        sector.m_Floor = mapData.m_Sectors[i].m_Floor;
+        sector.m_Ceiling = m_pMapData->m_Sectors[i].m_Ceiling;
+        sector.m_Floor = m_pMapData->m_Sectors[i].m_Floor;
 
         m_Sectors.push_back(sector);
     }
@@ -278,6 +280,11 @@ MapBuildData::ErrorCode MapBuildData::BuildKDTree(KDTreeMap *&oKDTree)
     }
 
     oKDTree = new KDTreeMap;
+
+    oKDTree->m_PlayerStartX = m_pMapData->m_PlayerStartPosition.first;
+    oKDTree->m_PlayerStartY = m_pMapData->m_PlayerStartPosition.second;
+    oKDTree->m_PlayerStartDirection = m_pMapData->m_PlayerStartDirection;
+
     oKDTree->m_RootNode = new KDTreeNode;
 
     for (unsigned int i = 0; i < m_Sectors.size(); i++)
@@ -430,7 +437,7 @@ bool KDTreeBuilder::Build()
         return false;
 
     MapBuildData::ErrorCode err = mapData.BuildKDTree(m_pKDTree);
-    if(err != MapBuildData::ErrorCode::OK)
+    if(err != MapBuildData::ErrorCode::OK || !m_pKDTree)
         return false;
 
     return true;
