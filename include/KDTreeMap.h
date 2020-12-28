@@ -39,6 +39,11 @@ public:
     KDTreeNode();
     virtual ~KDTreeNode();
 
+public:
+    unsigned int ComputeStreamSize() const;
+    void Stream(char *&ioData, unsigned int &oNbBytesWritten) const;
+    void UnStream(const char *ipData, unsigned int &oNbBytesRead);
+
 protected:
     std::vector<KDMapData::Wall> m_Walls;
 
@@ -59,13 +64,14 @@ public:
     virtual ~KDTreeMap();
 
 public:
-    void Stream(char *&oData);
-    void UnStream(const char *iData);
+    void Stream(char *&oData, unsigned int &oNbBytesWritten) const;
+    void UnStream(const char *ipData, unsigned int &oNbBytesRead);
 
 protected:
-    unsigned int ComputeStreamSize();
+    unsigned int ComputeStreamSize() const;
 
 protected:
+    std::vector<KDMapData::Sector> m_Sectors;
     KDTreeNode *m_RootNode;
 
 private:

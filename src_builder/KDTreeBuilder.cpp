@@ -280,6 +280,14 @@ MapBuildData::ErrorCode MapBuildData::BuildKDTree(KDTreeMap *&oKDTree)
     oKDTree = new KDTreeMap;
     oKDTree->m_RootNode = new KDTreeNode;
 
+    for (unsigned int i = 0; i < m_Sectors.size(); i++)
+    {
+        KDMapData::Sector sector;
+        sector.ceiling = m_Sectors[i].m_Ceiling;
+        sector.floor = m_Sectors[i].m_Floor;
+        oKDTree->m_Sectors.push_back(sector);
+    }
+
     return RecursiveBuildKDTree(allWalls, KDTreeNode::SplitPlane::XConst, oKDTree->m_RootNode);
 }
 

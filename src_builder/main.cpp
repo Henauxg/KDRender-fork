@@ -4,6 +4,7 @@
 
 #include "Map.h"
 #include "KDTreeBuilder.h"
+#include "KDTreeMap.h"
 
 int main(int argc, char **argv)
 {
@@ -83,6 +84,29 @@ int main(int argc, char **argv)
         std::cout << "Error: KD-tree construction failed" << std::endl;
         return 1;
     }
+
+    char *pStreamData = nullptr;
+    KDTreeMap *pKDTreeMap = builder.GetOutputTree();
+
+    if(pKDTreeMap)
+    {
+        unsigned outSize;
+        pKDTreeMap->Stream(pStreamData, outSize);
+        if(pStreamData)
+        {
+            std::ofstream oStream(oFilePath, std::ios::binary | std::ios::out);
+            if(!oStream.is_open())
+                std::cout << "Error: output file could not be created" << std::endl;
+
+            oStream.write(pStreamData, outSize);
+
+            delete pStreamData;
+        }
+        pStreamData = nullptr;
+
+        delete pKDTreeMap;
+    }
+    pKDTreeMap = nullptr;
 
     std::cout << "KD-Tree successfully built" << std::endl;
 
