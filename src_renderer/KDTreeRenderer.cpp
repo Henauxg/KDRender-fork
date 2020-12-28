@@ -25,6 +25,14 @@ namespace
                 wall.m_VertexFrom.m_Y = kdWall.m_From;
                 wall.m_VertexTo.m_Y = kdWall.m_To;
             }
+            else
+            {
+                wall.m_VertexFrom.m_Y = ipNode->GetSplitOffset();
+                wall.m_VertexTo.m_Y = wall.m_VertexFrom.m_Y;
+
+                wall.m_VertexFrom.m_X = kdWall.m_From;
+                wall.m_VertexTo.m_X = kdWall.m_To;
+            }
         }
 
         return wall;
@@ -36,7 +44,9 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_pFrameBuffer(new unsigned char[WINDOW_HEIGHT * WINDOW_WIDTH * 4u]),
     m_pHorizOcclusionBuffer(new unsigned char[WINDOW_WIDTH]),
     m_pTopOcclusionBuffer(new int[WINDOW_WIDTH]),
-    m_pBottomOcclusionBuffer(new int[WINDOW_WIDTH])
+    m_pBottomOcclusionBuffer(new int[WINDOW_WIDTH]),
+    m_PlayerFOV(90),
+    m_PlayerHeight(30)
 {
     ClearBuffers();
 }
@@ -73,6 +83,58 @@ void KDTreeRenderer::ClearBuffers()
 void KDTreeRenderer::RefreshFrameBuffer()
 {
     FillFrameBufferWithColor(200u, 200u, 200u);
+
+    Render();
+}
+
+void KDTreeRenderer::Render()
+{
+    m_PlayerZ = ComputeZ();
+
+    GetVector(m_PlayerPosition, m_PlayerDirection - m_PlayerFOV / 2, m_FrustumToLeft);
+    GetVector(m_PlayerPosition, m_PlayerDirection + m_PlayerFOV / 2, m_FrustumToRight);
+    GetVector(m_PlayerPosition, m_PlayerDirection, m_Look);
+
+    RenderNode(m_Map.m_RootNode);
+}
+
+void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
+{
+    // TODO: culling
+
+    bool positiveSide;
+    if (pNode->m_SplitPlane == KDTreeNode::SplitPlane::XConst)
+        positiveSide = m_PlayerPosition.m_X > pNode->m_SplitOffset;
+    else
+        positiveSide = m_PlayerPosition.m_Y > pNode->m_SplitOffset;
+
+    if (positiveSide && pNode->m_PositiveSide)
+        RenderNode(pNode->m_PositiveSide);
+    else if (!positiveSide && pNode->m_NegativeSide)
+        RenderNode(pNode->m_NegativeSide);
+
+    for (unsigned int i = 0; i < pNode->m_Walls.size(); i++)
+    {
+        KDTreeRenderer::Wall wall(GetWallFromNode(pNode, i));
+        if ((WhichSide(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom) <= 0 &&
+             WhichSide(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexTo) <= 0) ||
+            (WhichSide(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom) >= 0 &&
+             WhichSide(m_PlayerPosition, m_FrustumToRight, wall.m_VertexTo) >= 0) ||
+            (DotProduct(m_PlayerPosition, m_Look, m_PlayerPosition, wall.m_VertexFrom) <= 0 &&
+             DotProduct(m_PlayerPosition, m_Look, m_PlayerPosition, wall.m_VertexTo) <= 0))
+        {
+            // Culling (wall is entirely outside frustum)
+            continue;
+        }
+        else
+        {
+        }
+    }
+
+    if (positiveSide && pNode->m_NegativeSide)
+        RenderNode(pNode->m_NegativeSide);
+    else if (!positiveSide && pNode->m_PositiveSide)
+        RenderNode(pNode->m_PositiveSide);
 }
 
 int KDTreeRenderer::ComputeZ()

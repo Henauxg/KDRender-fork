@@ -40,6 +40,9 @@ protected:
     int ComputeZ();
     int RecursiveComputeZ(KDTreeNode *pNode);
 
+    void Render();
+    void RenderNode(KDTreeNode *pNode);
+
 protected:
     const KDTreeMap &m_Map;
 
@@ -49,9 +52,14 @@ protected:
     int *m_pBottomOcclusionBuffer;
 
     Vertex m_PlayerPosition;
+    int m_PlayerZ;
     int m_PlayerDirection;
-    int m_PlayerFOV;
-    int m_PlayerHeight;
+    Vertex m_FrustumToLeft;
+    Vertex m_FrustumToRight;
+    Vertex m_Look;
+
+    const int m_PlayerFOV;
+    const int m_PlayerHeight;
 };
 
 void KDTreeRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigned char g, unsigned char b)
