@@ -128,6 +128,47 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
         }
         else
         {
+            // Render walls within split plane
+            for (unsigned int i = 0; i < pNode->m_Walls.size(); i++)
+            {
+                int minAngle, maxAngle;
+                Vertex minVertex, maxVertex;
+
+                if (WhichSide(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexTo) <= 0 ||
+                    WhichSide(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom) <= 0)
+                {
+                    minAngle = -m_PlayerFOV / 2;
+                    LineLineIntersection(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom, wall.m_VertexTo, minVertex);
+                }
+                else
+                {
+                    minAngle = Angle(m_PlayerPosition, m_Look, wall.m_VertexFrom);
+                    minVertex = wall.m_VertexFrom;
+                }
+
+                if (WhichSide(m_PlayerPosition, m_FrustumToRight, wall.m_VertexTo) >= 0 ||
+                    WhichSide(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom) >= 0)
+                {
+                    maxAngle = +m_PlayerFOV / 2;
+                    LineLineIntersection(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom, wall.m_VertexTo, maxVertex);
+                }
+                else
+                {
+                    maxAngle = Angle(m_PlayerPosition, m_Look, wall.m_VertexTo);
+                    maxVertex = wall.m_VertexTo;
+                }
+
+                if (minAngle > maxAngle)
+                {
+                    std::swap(minAngle, maxAngle);
+                    std::swap(minVertex, maxVertex);
+                }
+
+                minAngle = minAngle + m_PlayerDirection;
+                maxAngle = maxAngle + m_PlayerDirection;
+
+
+            }
         }
     }
 
