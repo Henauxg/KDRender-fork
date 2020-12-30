@@ -4,6 +4,7 @@
 #include <cmath>
 
 #define DECIMAL_MULT 1000
+#define ANGLE_MULT 100
 
 template<typename Vertex>
 int WhichSide(const Vertex &iV1, const Vertex &iV2, const Vertex &iP)
@@ -24,7 +25,7 @@ int cosInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
-    double iAngleRad = static_cast<double>(iAngle) / 180.0 * M_PI;
+    double iAngleRad = static_cast<double>(iAngle) / (180.0 * static_cast<double>(ANGLE_MULT)) * M_PI;
     double mult = static_cast<double>(DECIMAL_MULT);
     double res = cos(iAngleRad) * mult;
     return static_cast<int>(res);
@@ -34,7 +35,7 @@ int sinInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
-    double iAngleRad = static_cast<double>(iAngle) / 180.0 * M_PI;
+    double iAngleRad = static_cast<double>(iAngle) / (180.0 * static_cast<double>(ANGLE_MULT)) * M_PI;
     double mult = static_cast<double>(DECIMAL_MULT);
     double res = sin(iAngleRad) * mult;
     return static_cast<int>(res);
@@ -45,7 +46,7 @@ int atanInt(int iX)
     // Extremely non-optimized
     // TODO: implement lookup table
     double x = static_cast<double>(iX) / DECIMAL_MULT;
-    double atanVal = atan(x) * 180 / M_PI;
+    double atanVal = atan(x) * (180.0 * static_cast<double>(ANGLE_MULT)) / M_PI;
     return static_cast<int>(atanVal);
 }
 
@@ -115,7 +116,7 @@ int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
     // Extremely non-optimized
     // TODO: implement lookup table
     double angle = -atan2(det, dot);
-    return static_cast<int>(angle / M_PI * 180.0);
+    return static_cast<int>(angle / M_PI * (180.0 * static_cast<double>(ANGLE_MULT)));
 }
 
 // Thanks to http://flassari.is/2008/11/line-line-intersection-in-cplusplus/ for writing
@@ -146,79 +147,6 @@ bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV
     oIntersection.m_Y = y;
     return true;
 }
-
-// template <typename Vertex>
-// bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
-// {
-//     int a1, a2, b1, b2, c1, c2; /* Coefficients of line eqns. */
-//     int r1, r2, r3, r4;         /* 'Sign' values */
-//     int denom, offset, num;     /* Intermediate values */
-
-//     /* Compute a1, b1, c1, where line joining points 1 and 2
-//      * is "a1 x  +  b1 y  +  c1  =  0".
-//      */
-
-//     a1 = iV2.m_Y - iV1.m_Y;
-//     b1 = iV1.m_X - iV2.m_X;
-//     c1 = iV2.m_X * iV1.m_Y - iV1.m_X * iV2.m_Y;
-
-//     /* Compute r3 and r4.
-//      */
-
-//     r3 = a1 * iV3.m_X + b1 * iV3.m_Y + c1;
-//     r4 = a1 * iV4.m_X + b1 * iV4.m_Y + c1;
-
-//     /* Check signs of r3 and r4.  If both point 3 and point 4 lie on
-//      * same side of line 1, the line segments do not intersect.
-//      */
-
-//     if (r3 != 0 &&
-//         r4 != 0 &&
-//         r3 * r4 >= 0)
-//         return false;
-
-//     /* Compute a2, b2, c2 */
-
-//     a2 = iV4.m_Y - iV3.m_Y;
-//     b2 = iV3.m_X - iV4.m_X;
-//     c2 = iV4.m_X * iV3.m_Y - iV3.m_X * iV4.m_Y;
-
-//     /* Compute r1 and r2 */
-
-//     r1 = a2 * iV1.m_X + b2 * iV1.m_Y + c2;
-//     r2 = a2 * iV2.m_X + b2 * iV2.m_Y + c2;
-
-//     /* Check signs of r1 and r2.  If both point 1 and point 2 lie
-//      * on same side of second line segment, the line segments do
-//      * not intersect.
-//      */
-
-//     if (r1 != 0 &&
-//         r2 != 0 &&
-//         r1 * r2 >= 0)
-//         return false;
-
-//     /* Line segments intersect: compute intersection point. 
-//      */
-
-//     denom = a1 * b2 - a2 * b1;
-//     if (denom == 0)
-//         return false;
-//     offset = denom < 0 ? -denom / 2 : denom / 2;
-
-//     /* The denom/2 is to get rounding instead of truncating.  It
-//      * is added or subtracted to the numerator, depending upon the
-//      * sign of the numerator.
-//      */
-
-//     num = b1 * c2 - b2 * c1;
-//     oIntersection.m_X = (num < 0 ? num - offset : num + offset) / denom;
-
-//     num = a2 * c1 - a1 * c2;
-//     oIntersection.m_Y = (num < 0 ? num - offset : num + offset) / denom;
-
-//     return true;
-// }
 
 // Really dirty, just wanted to try this out
 // TODO: code a real intersection solver

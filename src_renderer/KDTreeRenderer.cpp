@@ -45,7 +45,7 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_pHorizOcclusionBuffer(new unsigned char[WINDOW_WIDTH]),
     m_pTopOcclusionBuffer(new int[WINDOW_WIDTH]),
     m_pBottomOcclusionBuffer(new int[WINDOW_WIDTH]),
-    m_PlayerHorizontalFOV(60),
+    m_PlayerHorizontalFOV(60 * ANGLE_MULT),
     m_PlayerVerticalFOV((m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH),
     m_PlayerHeight(30)
 {
@@ -202,6 +202,12 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     int minDist = DistInt(m_PlayerPosition, iMinVertex) * cosInt(iMinAngle) / DECIMAL_MULT; // Correction for distortion
     int maxDist = DistInt(m_PlayerPosition, iMaxVertex) * cosInt(iMaxAngle) / DECIMAL_MULT; // Correction for distortion
 
+    // TODO: perform actual clipping
+    // Dirty hack
+    if(maxDist <= 0)
+        return;
+    minDist = minDist <= 0 ? 1 : minDist;
+
     // Hard wall
     if (iWall.m_pKDWall->m_OutSector == -1 && WhichSide(iWall.m_VertexFrom, iWall.m_VertexTo, m_PlayerPosition) > 0)
     {
@@ -222,11 +228,11 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         {
             if (!m_pHorizOcclusionBuffer[x])
             {
-                unsigned int t = ((x - minX) * DECIMAL_MULT ) / (maxX - minX);
-                unsigned int minY = ((DECIMAL_MULT - t) * minVertexBottomPixel + t * maxVertexBottomPixel) / DECIMAL_MULT;
-                unsigned int maxY = ((DECIMAL_MULT - t) * minVertexTopPixel + t * maxVertexTopPixel) / DECIMAL_MULT;
-                minY = std::max<unsigned int>(minY, m_pBottomOcclusionBuffer[x]);
-                maxY = std::min<unsigned int>(maxY, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
+                int t = ((x - minX) * DECIMAL_MULT ) / (maxX - minX);
+                int minY = ((DECIMAL_MULT - t) * minVertexBottomPixel + t * maxVertexBottomPixel) / DECIMAL_MULT;
+                int maxY = ((DECIMAL_MULT - t) * minVertexTopPixel + t * maxVertexTopPixel) / DECIMAL_MULT;
+                minY = std::max<int>(minY, m_pBottomOcclusionBuffer[x]);
+                maxY = std::min<int>(maxY, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
 
                 int color = (255u * (DECIMAL_MULT - t)) / DECIMAL_MULT;
                 for (unsigned int y = minY; y <= maxY; y++)
@@ -302,7 +308,7 @@ bool KDTreeRenderer::isInsideFrustum(const Vertex &iVertex) const
 void KDTreeRenderer::SetPlayerCoordinates(const KDTreeRenderer::Vertex &iPosition, int iDirection)
 {
     m_PlayerPosition = iPosition;
-    m_PlayerDirection = iDirection;
+    m_PlayerDirection = iDirection * ANGLE_MULT;
 
     GetVector(m_PlayerPosition, m_PlayerDirection - m_PlayerHorizontalFOV / 2, m_FrustumToLeft);
     GetVector(m_PlayerPosition, m_PlayerDirection + m_PlayerHorizontalFOV / 2, m_FrustumToRight);
@@ -316,7 +322,7 @@ KDTreeRenderer::Vertex KDTreeRenderer::GetPlayerPosition() const
 
 int KDTreeRenderer::GetPlayerDirection() const
 {
-    return m_PlayerDirection;
+    return m_PlayerDirection / ANGLE_MULT;
 }
 
 KDTreeRenderer::Vertex KDTreeRenderer::GetLook() const
