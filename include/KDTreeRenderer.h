@@ -30,7 +30,12 @@ public:
     void RefreshFrameBuffer();
     void ClearBuffers();
 
-    inline void SetPlayerPosition(int iX, int iY, int iDirection);
+    void SetPlayerCoordinates(const Vertex &iPosition, int iDirection);
+
+    Vertex GetPlayerPosition() const;
+    int GetPlayerDirection() const;
+
+    Vertex GetLook() const;
 
 protected:
     void FillFrameBufferWithColor(unsigned char r, unsigned char g, unsigned char b);
@@ -42,6 +47,10 @@ protected:
 
     void Render();
     void RenderNode(KDTreeNode *pNode);
+    void RenderWall(const Wall &iWall, const Vertex &iMinVertex, const Vertex &iMaxVertex, int iMinAngle, int iMaxAngle);
+
+protected:
+    bool isInsideFrustum(const Vertex &iVertex) const;
 
 protected:
     const KDTreeMap &m_Map;
@@ -58,7 +67,8 @@ protected:
     Vertex m_FrustumToRight;
     Vertex m_Look;
 
-    const int m_PlayerFOV;
+    const int m_PlayerHorizontalFOV;
+    const int m_PlayerVerticalFOV;
     const int m_PlayerHeight;
 };
 
@@ -68,13 +78,6 @@ void KDTreeRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigne
     m_pFrameBuffer[idx] = r;
     m_pFrameBuffer[idx + 1u] = g;
     m_pFrameBuffer[idx + 2u] = b;
-}
-
-void KDTreeRenderer::SetPlayerPosition(int iX, int iY, int iDirection)
-{
-    m_PlayerPosition.m_X = iX;
-    m_PlayerPosition.m_Y = iY;
-    m_PlayerDirection = iDirection;
 }
 
 #endif

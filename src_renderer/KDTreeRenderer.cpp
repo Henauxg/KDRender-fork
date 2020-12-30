@@ -45,7 +45,8 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_pHorizOcclusionBuffer(new unsigned char[WINDOW_WIDTH]),
     m_pTopOcclusionBuffer(new int[WINDOW_WIDTH]),
     m_pBottomOcclusionBuffer(new int[WINDOW_WIDTH]),
-    m_PlayerFOV(90),
+    m_PlayerHorizontalFOV(60),
+    m_PlayerVerticalFOV((m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH),
     m_PlayerHeight(30)
 {
     ClearBuffers();
@@ -91,8 +92,8 @@ void KDTreeRenderer::Render()
 {
     m_PlayerZ = ComputeZ();
 
-    GetVector(m_PlayerPosition, m_PlayerDirection - m_PlayerFOV / 2, m_FrustumToLeft);
-    GetVector(m_PlayerPosition, m_PlayerDirection + m_PlayerFOV / 2, m_FrustumToRight);
+    GetVector(m_PlayerPosition, m_PlayerDirection - m_PlayerHorizontalFOV / 2, m_FrustumToLeft);
+    GetVector(m_PlayerPosition, m_PlayerDirection + m_PlayerHorizontalFOV / 2, m_FrustumToRight);
     GetVector(m_PlayerPosition, m_PlayerDirection, m_Look);
 
     RenderNode(m_Map.m_RootNode);
@@ -131,43 +132,56 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
             // Render walls within split plane
             for (unsigned int i = 0; i < pNode->m_Walls.size(); i++)
             {
-                int minAngle, maxAngle;
+                int minAngle = m_PlayerHorizontalFOV / 2, maxAngle = -m_PlayerHorizontalFOV / 2;
                 Vertex minVertex, maxVertex;
 
-                if (WhichSide(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexTo) <= 0 ||
-                    WhichSide(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom) <= 0)
-                {
-                    minAngle = -m_PlayerFOV / 2;
-                    LineLineIntersection(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom, wall.m_VertexTo, minVertex);
-                }
-                else
-                {
-                    minAngle = Angle(m_PlayerPosition, m_Look, wall.m_VertexFrom);
-                    minVertex = wall.m_VertexFrom;
-                }
+                bool vertexFromInsideFrustum = isInsideFrustum(wall.m_VertexFrom);
+                bool vertexToInsideFrustum = isInsideFrustum(wall.m_VertexTo);
 
-                if (WhichSide(m_PlayerPosition, m_FrustumToRight, wall.m_VertexTo) >= 0 ||
-                    WhichSide(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom) >= 0)
+                if (!vertexFromInsideFrustum || !vertexToInsideFrustum)
                 {
-                    maxAngle = +m_PlayerFOV / 2;
-                    LineLineIntersection(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom, wall.m_VertexTo, maxVertex);
-                }
-                else
-                {
-                    maxAngle = Angle(m_PlayerPosition, m_Look, wall.m_VertexTo);
-                    maxVertex = wall.m_VertexTo;
+                    Vertex intersectionVertex;
+                    if (HalfLineSegmentIntersection(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
+                    {
+                        minVertex = intersectionVertex;
+                        minAngle = -m_PlayerHorizontalFOV / 2;
+                    }
+                    if (HalfLineSegmentIntersection(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
+                    {
+                        maxVertex = intersectionVertex;
+                        maxAngle = m_PlayerHorizontalFOV / 2;
+                    }
                 }
 
-                if (minAngle > maxAngle)
+                auto updateMinMaxAnglesAndVertices = [&](int iAngle, const Vertex &iVertex)
                 {
-                    std::swap(minAngle, maxAngle);
-                    std::swap(minVertex, maxVertex);
+                    if (iAngle < minAngle)
+                    {
+                        minAngle = iAngle;
+                        minVertex = iVertex;
+                    }
+                    if (iAngle > maxAngle)
+                    {
+                        maxAngle = iAngle;
+                        maxVertex = iVertex;
+                    }
+                };
+
+                if(vertexFromInsideFrustum)
+                {
+                    int angle = Angle(m_PlayerPosition, m_Look, wall.m_VertexFrom);
+                    updateMinMaxAnglesAndVertices(angle, wall.m_VertexFrom);
                 }
 
-                minAngle = minAngle + m_PlayerDirection;
-                maxAngle = maxAngle + m_PlayerDirection;
+                if (vertexToInsideFrustum)
+                {
+                    int angle = Angle(m_PlayerPosition, m_Look, wall.m_VertexTo);
+                    updateMinMaxAnglesAndVertices(angle, wall.m_VertexTo);
+                }
 
-
+                // Should always be true
+                if(minAngle <= maxAngle)
+                    RenderWall(wall, minVertex, maxVertex, minAngle, maxAngle);
             }
         }
     }
@@ -176,6 +190,53 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
         RenderNode(pNode->m_NegativeSide);
     else if (!positiveSide && pNode->m_PositiveSide)
         RenderNode(pNode->m_PositiveSide);
+}
+
+void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, const Vertex &iMaxVertex, int iMinAngle, int iMaxAngle)
+{
+    int minX = ((iMinAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV;
+    int maxX = ((iMaxAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV;
+    minX = Clamp(minX, 0, WINDOW_WIDTH - 1);
+    maxX = Clamp(maxX, 0, WINDOW_WIDTH - 1);
+
+    int minDist = DistInt(m_PlayerPosition, iMinVertex) * cosInt(iMinAngle) / DECIMAL_MULT; // Correction for distortion
+    int maxDist = DistInt(m_PlayerPosition, iMaxVertex) * cosInt(iMaxAngle) / DECIMAL_MULT; // Correction for distortion
+
+    // Hard wall
+    if (iWall.m_pKDWall->m_OutSector == -1 && WhichSide(iWall.m_VertexFrom, iWall.m_VertexTo, m_PlayerPosition) > 0)
+    {
+        int eyeToTop = m_Map.m_Sectors[iWall.m_pKDWall->m_InSector].ceiling - m_PlayerZ;
+        int eyeToBottom = m_Map.m_Sectors[iWall.m_pKDWall->m_InSector].floor + m_PlayerZ;
+
+        int minVertexBottomPixel = ((-atanInt(DECIMAL_MULT * eyeToBottom / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        int minVertexTopPixel = ((atanInt(DECIMAL_MULT * eyeToTop / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        Clamp(minVertexBottomPixel, 0, WINDOW_HEIGHT - 1);
+        Clamp(minVertexTopPixel, 0, WINDOW_HEIGHT - 1);
+
+        int maxVertexBottomPixel = ((-atanInt(DECIMAL_MULT * eyeToBottom / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        int maxVertexTopPixel = ((atanInt(DECIMAL_MULT * eyeToTop / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        Clamp(maxVertexBottomPixel, 0, WINDOW_HEIGHT - 1);
+        Clamp(maxVertexTopPixel, 0, WINDOW_HEIGHT - 1);
+
+        for (unsigned int x = minX; x < maxX; x++)
+        {
+            if (!m_pHorizOcclusionBuffer[x])
+            {
+                unsigned int t = ((x - minX) * DECIMAL_MULT ) / (maxX - minX);
+                unsigned int minY = ((DECIMAL_MULT - t) * minVertexBottomPixel + t * maxVertexBottomPixel) / DECIMAL_MULT;
+                unsigned int maxY = ((DECIMAL_MULT - t) * minVertexTopPixel + t * maxVertexTopPixel) / DECIMAL_MULT;
+                minY = std::max<unsigned int>(minY, m_pBottomOcclusionBuffer[x]);
+                maxY = std::min<unsigned int>(maxY, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
+
+                int color = (255u * (DECIMAL_MULT - t)) / DECIMAL_MULT;
+                for (unsigned int y = minY; y <= maxY; y++)
+                {
+                    WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + x, color, 0u, 0u);
+                }
+            }
+        }
+        memset(m_pHorizOcclusionBuffer + minX, 1u, maxX - minX);
+    }
 }
 
 int KDTreeRenderer::ComputeZ()
@@ -230,4 +291,35 @@ int KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
     }
 
     return oZ;
+}
+
+bool KDTreeRenderer::isInsideFrustum(const Vertex &iVertex) const
+{
+    return (WhichSide(m_PlayerPosition, m_FrustumToLeft, iVertex) >= 0) &&
+           (WhichSide(m_PlayerPosition, m_FrustumToRight, iVertex) <= 0);
+}
+
+void KDTreeRenderer::SetPlayerCoordinates(const KDTreeRenderer::Vertex &iPosition, int iDirection)
+{
+    m_PlayerPosition = iPosition;
+    m_PlayerDirection = iDirection;
+
+    GetVector(m_PlayerPosition, m_PlayerDirection - m_PlayerHorizontalFOV / 2, m_FrustumToLeft);
+    GetVector(m_PlayerPosition, m_PlayerDirection + m_PlayerHorizontalFOV / 2, m_FrustumToRight);
+    GetVector(m_PlayerPosition, m_PlayerDirection, m_Look);
+}
+
+KDTreeRenderer::Vertex KDTreeRenderer::GetPlayerPosition() const
+{
+    return m_PlayerPosition;
+}
+
+int KDTreeRenderer::GetPlayerDirection() const
+{
+    return m_PlayerDirection;
+}
+
+KDTreeRenderer::Vertex KDTreeRenderer::GetLook() const
+{
+    return m_Look;
 }

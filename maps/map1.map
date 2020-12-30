@@ -2,7 +2,7 @@ player
 {
     start
     {
-        position {0, -200}
+        position {10, -200}
         direction {0}
     }
 }

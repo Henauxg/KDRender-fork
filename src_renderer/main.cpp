@@ -49,7 +49,17 @@ int main(int argc, char **argv)
     }
 
     KDTreeRenderer renderer(map);
-    renderer.SetPlayerPosition(map.GetPlayerStartX(), map.GetPlayerStartY(), map.GetPlayerStartDirection());
+    
+    KDTreeRenderer::Vertex playerPos;
+    playerPos.m_X = map.GetPlayerStartX();
+    playerPos.m_Y = map.GetPlayerStartY();
+
+    int playerDir = map.GetPlayerStartDirection();
+
+    renderer.SetPlayerCoordinates(playerPos, playerDir);
+
+    int dr = 10;
+    int dtheta = 5;
 
     sf::RenderWindow app(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT),
                          "KDTree Map Renderer",
@@ -57,6 +67,7 @@ int main(int argc, char **argv)
     Screen screen(renderer);
     sf::Clock clock;
 
+    float deltaTMovement = 0.f;
     while (app.isOpen())
     {
         sf::Event event;
@@ -66,11 +77,17 @@ int main(int argc, char **argv)
         app.draw(screen);
         app.display();
 
-        std::cout << "FPS = " << 1000.f / (float)(clock.getElapsedTime().asMilliseconds()) << std::endl;
+        float deltaT = (float)(clock.getElapsedTime().asMilliseconds());
+        deltaTMovement += deltaT;
+
+        // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
         clock.restart();
 
-        renderer.ClearBuffers();
-        renderer.RefreshFrameBuffer();
+        playerPos = renderer.GetPlayerPosition();
+        playerDir = renderer.GetPlayerDirection();
+
+        int dPos = 0;
+        int dDir = 0;
 
         while (app.pollEvent(event))
         {
@@ -80,35 +97,61 @@ int main(int argc, char **argv)
                 app.close();
                 break;
             case sf::Event::KeyPressed:
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
-                {  
-
-                }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q))
                 {
-                    
-                }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q))
-                {
-                    
+                    dPos = -dr;
                 }
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
                 {
-                    
+                    dPos = dr;
                 }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Z))
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::O))
                 {
-                    
+                    dPos = dr;
+                }
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::L))
+                {
+                    dPos = -dr;
+                }
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::K))
+                {
+                    dDir = -dtheta;
+                }
+                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::M))
+                {
+                    dDir = +dtheta;
                 }
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
                 {
-                    
+                    std::cout << "Dumping player info:" << std::endl;
+                    std::cout << "x = " << playerPos.m_X << std::endl;
+                    std::cout << "y = " << playerPos.m_Y << std::endl;
+                    std::cout << "dir = " << playerDir << std::endl;
                 }
                 break;
             default:
                 break;
             }
         }
+
+        KDTreeRenderer::Vertex look(renderer.GetLook());
+        int dx = ((100 * dPos * (look.m_X - playerPos.m_X)) / 100) / 100;
+        int dy = ((100 * dPos * (look.m_Y - playerPos.m_Y)) / 100) / 100;
+        playerPos.m_X += dx;
+        playerPos.m_Y += dy;
+
+        playerDir += dDir;
+        while(playerDir < 0)
+            playerDir += 360;
+        while(playerDir > 360)
+            playerDir -= 360;
+
+        renderer.SetPlayerCoordinates(playerPos, playerDir);
+        renderer.ClearBuffers();
+        renderer.RefreshFrameBuffer();
+
+        if(deltaTMovement > 50)
+            deltaTMovement = 0;
     }
 
     return 0;
