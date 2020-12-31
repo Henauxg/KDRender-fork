@@ -70,6 +70,7 @@ protected:
     const int m_PlayerHorizontalFOV;
     const int m_PlayerVerticalFOV;
     const int m_PlayerHeight;
+    const int m_MaxColorInterpolationDist;
 };
 
 void KDTreeRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigned char g, unsigned char b)

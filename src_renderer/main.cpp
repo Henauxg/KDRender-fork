@@ -135,8 +135,8 @@ int main(int argc, char **argv)
         }
 
         KDTreeRenderer::Vertex look(renderer.GetLook());
-        int dx = ((100 * dPos * (look.m_X - playerPos.m_X)) / 100) / 100;
-        int dy = ((100 * dPos * (look.m_Y - playerPos.m_Y)) / 100) / 100;
+        int dx = ARITHMETIC_SHIFT(((100 * dPos * (look.m_X - playerPos.m_X)) / 100), DECIMAL_SHIFT);
+        int dy = ARITHMETIC_SHIFT(((100 * dPos * (look.m_Y - playerPos.m_Y)) / 100), DECIMAL_SHIFT);
         playerPos.m_X += dx;
         playerPos.m_Y += dy;
 

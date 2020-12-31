@@ -45,9 +45,10 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_pHorizOcclusionBuffer(new unsigned char[WINDOW_WIDTH]),
     m_pTopOcclusionBuffer(new int[WINDOW_WIDTH]),
     m_pBottomOcclusionBuffer(new int[WINDOW_WIDTH]),
-    m_PlayerHorizontalFOV(60 * ANGLE_MULT),
+    m_PlayerHorizontalFOV(80 * (1 << ANGLE_SHIFT)),
     m_PlayerVerticalFOV((m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH),
-    m_PlayerHeight(30)
+    m_PlayerHeight(30),
+    m_MaxColorInterpolationDist(500)
 {
     ClearBuffers();
 }
@@ -83,8 +84,7 @@ void KDTreeRenderer::ClearBuffers()
 
 void KDTreeRenderer::RefreshFrameBuffer()
 {
-    FillFrameBufferWithColor(200u, 200u, 200u);
-
+    FillFrameBufferWithColor(0u, 0u, 0u);
     Render();
 }
 
@@ -199,8 +199,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     minX = Clamp(minX, 0, WINDOW_WIDTH - 1);
     maxX = Clamp(maxX, 0, WINDOW_WIDTH - 1);
 
-    int minDist = DistInt(m_PlayerPosition, iMinVertex) * cosInt(iMinAngle) / DECIMAL_MULT; // Correction for distortion
-    int maxDist = DistInt(m_PlayerPosition, iMaxVertex) * cosInt(iMaxAngle) / DECIMAL_MULT; // Correction for distortion
+    int minDist = ARITHMETIC_SHIFT(DistInt(m_PlayerPosition, iMinVertex) * cosInt(iMinAngle), DECIMAL_SHIFT); // Correction for distortion
+    int maxDist = ARITHMETIC_SHIFT(DistInt(m_PlayerPosition, iMaxVertex) * cosInt(iMaxAngle), DECIMAL_SHIFT);   // Correction for distortion
 
     // TODO: perform actual clipping
     // Dirty hack
@@ -208,33 +208,37 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         return;
     minDist = minDist <= 0 ? 1 : minDist;
 
+    int maxColorRange = iWall.m_VertexFrom.m_X == iWall.m_VertexTo.m_X ? 230 : 180;
+
     // Hard wall
     if (iWall.m_pKDWall->m_OutSector == -1 && WhichSide(iWall.m_VertexFrom, iWall.m_VertexTo, m_PlayerPosition) > 0)
     {
         int eyeToTop = m_Map.m_Sectors[iWall.m_pKDWall->m_InSector].ceiling - m_PlayerZ;
-        int eyeToBottom = m_Map.m_Sectors[iWall.m_pKDWall->m_InSector].floor + m_PlayerZ;
+        int eyeToBottom = m_PlayerZ - m_Map.m_Sectors[iWall.m_pKDWall->m_InSector].floor;
 
-        int minVertexBottomPixel = ((-atanInt(DECIMAL_MULT * eyeToBottom / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-        int minVertexTopPixel = ((atanInt(DECIMAL_MULT * eyeToTop / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-        Clamp(minVertexBottomPixel, 0, WINDOW_HEIGHT - 1);
-        Clamp(minVertexTopPixel, 0, WINDOW_HEIGHT - 1);
+        int minVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottom / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        int minVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTop / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
-        int maxVertexBottomPixel = ((-atanInt(DECIMAL_MULT * eyeToBottom / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-        int maxVertexTopPixel = ((atanInt(DECIMAL_MULT * eyeToTop / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-        Clamp(maxVertexBottomPixel, 0, WINDOW_HEIGHT - 1);
-        Clamp(maxVertexTopPixel, 0, WINDOW_HEIGHT - 1);
+        int maxVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottom / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        int maxVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTop / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+
+        int minVertexColor = ((m_MaxColorInterpolationDist - minDist) * maxColorRange) / m_MaxColorInterpolationDist;
+        int maxVertexColor = ((m_MaxColorInterpolationDist - maxDist) * maxColorRange) / m_MaxColorInterpolationDist;
+        minVertexColor = Clamp(minVertexColor, 0, maxColorRange);
+        maxVertexColor = Clamp(maxVertexColor, 0, maxColorRange);
 
         for (unsigned int x = minX; x < maxX; x++)
         {
+            // TODO: optimize divisions
             if (!m_pHorizOcclusionBuffer[x])
             {
-                int t = ((x - minX) * DECIMAL_MULT ) / (maxX - minX);
-                int minY = ((DECIMAL_MULT - t) * minVertexBottomPixel + t * maxVertexBottomPixel) / DECIMAL_MULT;
-                int maxY = ((DECIMAL_MULT - t) * minVertexTopPixel + t * maxVertexTopPixel) / DECIMAL_MULT;
+                int t = ((x - minX) * (1 << DECIMAL_SHIFT)) / (maxX - minX);
+                int minY = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - t) * minVertexBottomPixel + t * maxVertexBottomPixel), DECIMAL_SHIFT);
+                int maxY = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - t) * minVertexTopPixel + t * maxVertexTopPixel), DECIMAL_SHIFT);
                 minY = std::max<int>(minY, m_pBottomOcclusionBuffer[x]);
                 maxY = std::min<int>(maxY, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
 
-                int color = (255u * (DECIMAL_MULT - t)) / DECIMAL_MULT;
+                int color = ARITHMETIC_SHIFT((minVertexColor * ((1 << DECIMAL_SHIFT) - t)) + t * maxVertexColor, DECIMAL_SHIFT);
                 for (unsigned int y = minY; y <= maxY; y++)
                 {
                     WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + x, color, 0u, 0u);
@@ -308,7 +312,7 @@ bool KDTreeRenderer::isInsideFrustum(const Vertex &iVertex) const
 void KDTreeRenderer::SetPlayerCoordinates(const KDTreeRenderer::Vertex &iPosition, int iDirection)
 {
     m_PlayerPosition = iPosition;
-    m_PlayerDirection = iDirection * ANGLE_MULT;
+    m_PlayerDirection = iDirection * (1 << ANGLE_SHIFT);
 
     GetVector(m_PlayerPosition, m_PlayerDirection - m_PlayerHorizontalFOV / 2, m_FrustumToLeft);
     GetVector(m_PlayerPosition, m_PlayerDirection + m_PlayerHorizontalFOV / 2, m_FrustumToRight);
@@ -322,7 +326,7 @@ KDTreeRenderer::Vertex KDTreeRenderer::GetPlayerPosition() const
 
 int KDTreeRenderer::GetPlayerDirection() const
 {
-    return m_PlayerDirection / ANGLE_MULT;
+    return ARITHMETIC_SHIFT(m_PlayerDirection, ANGLE_SHIFT);
 }
 
 KDTreeRenderer::Vertex KDTreeRenderer::GetLook() const

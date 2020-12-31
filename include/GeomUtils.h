@@ -3,8 +3,7 @@
 
 #include <cmath>
 
-#define DECIMAL_MULT 1000
-#define ANGLE_MULT 100
+#include "Consts.h"
 
 template<typename Vertex>
 int WhichSide(const Vertex &iV1, const Vertex &iV2, const Vertex &iP)
@@ -25,8 +24,8 @@ int cosInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
-    double iAngleRad = static_cast<double>(iAngle) / (180.0 * static_cast<double>(ANGLE_MULT)) * M_PI;
-    double mult = static_cast<double>(DECIMAL_MULT);
+    double iAngleRad = static_cast<double>(iAngle) / (180.0 * static_cast<double>((1 << ANGLE_SHIFT))) * M_PI;
+    double mult = static_cast<double>((1 << DECIMAL_SHIFT));
     double res = cos(iAngleRad) * mult;
     return static_cast<int>(res);
 }
@@ -35,8 +34,8 @@ int sinInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
-    double iAngleRad = static_cast<double>(iAngle) / (180.0 * static_cast<double>(ANGLE_MULT)) * M_PI;
-    double mult = static_cast<double>(DECIMAL_MULT);
+    double iAngleRad = static_cast<double>(iAngle) / (180.0 * static_cast<double>((1 << ANGLE_SHIFT))) * M_PI;
+    double mult = static_cast<double>((1 << DECIMAL_SHIFT));
     double res = sin(iAngleRad) * mult;
     return static_cast<int>(res);
 }
@@ -45,16 +44,16 @@ int atanInt(int iX)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
-    double x = static_cast<double>(iX) / DECIMAL_MULT;
-    double atanVal = atan(x) * (180.0 * static_cast<double>(ANGLE_MULT)) / M_PI;
+    double x = static_cast<double>(iX) / (1 << DECIMAL_SHIFT);
+    double atanVal = atan(x) * (180.0 * static_cast<double>((1 << ANGLE_SHIFT))) / M_PI;
     return static_cast<int>(atanVal);
 }
 
 template<typename Vertex>
 void GetVector(const Vertex &iOrigin, int iDirection, Vertex &oTo)
 {
-    int cosDirMult = cosInt(iDirection) / 10;
-    int sinDirMult = sinInt(iDirection) / 10;
+    int cosDirMult = cosInt(iDirection);
+    int sinDirMult = sinInt(iDirection);
 
     oTo.m_X = iOrigin.m_X + sinDirMult;
     oTo.m_Y = iOrigin.m_Y + cosDirMult;
@@ -116,7 +115,7 @@ int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
     // Extremely non-optimized
     // TODO: implement lookup table
     double angle = -atan2(det, dot);
-    return static_cast<int>(angle / M_PI * (180.0 * static_cast<double>(ANGLE_MULT)));
+    return static_cast<int>(angle / M_PI * (180.0 * static_cast<double>((1 << ANGLE_SHIFT))));
 }
 
 // Thanks to http://flassari.is/2008/11/line-line-intersection-in-cplusplus/ for writing
