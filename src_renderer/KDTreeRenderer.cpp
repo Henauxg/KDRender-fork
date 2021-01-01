@@ -212,9 +212,11 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     char g = iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
     char b = iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
     int maxColorRange = iWall.m_VertexFrom.m_X == iWall.m_VertexTo.m_X ? 230 : 180;
-    
+
+    int whichSide = WhichSide(iWall.m_VertexFrom, iWall.m_VertexTo, m_PlayerPosition);
+
     // Hard wall
-    if (iWall.m_pKDWall->m_OutSector == -1 && WhichSide(iWall.m_VertexFrom, iWall.m_VertexTo, m_PlayerPosition) > 0)
+    if (iWall.m_pKDWall->m_OutSector == -1 && whichSide > 0)
     {
         int eyeToTop = m_Map.m_Sectors[iWall.m_pKDWall->m_InSector].ceiling - m_PlayerZ;
         int eyeToBottom = m_PlayerZ - m_Map.m_Sectors[iWall.m_pKDWall->m_InSector].floor;
@@ -249,6 +251,10 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
             }
         }
         memset(m_pHorizOcclusionBuffer + minX, 1u, maxX - minX);
+    }
+    else if (whichSide > 0)
+    {
+        
     }
 }
 

@@ -115,15 +115,18 @@ public:
         Relationship FindRelationship(const Sector &iSector2) const
         {
             // TODO: there are smarter ways to work out inclusion
-            Relationship ret;
+            Relationship ret = Relationship::UNDETERMINED;
 
+            unsigned int nbOnOutline = 0;
             unsigned int nbInside = 0;
             unsigned int nbOutside = 0;
             for (const Wall &thisWall : m_Walls)
             {
                 const Vertex &thisVertex = thisWall.m_VertexFrom;
+                bool onOutline = false;
 
-                bool isInside = true;
+                // TODO: sort segments (in order to perform a binary search instead of linear)
+                unsigned int nbIntersectionsAlongYPositive = 0;
                 for (const Wall &otherWall : iSector2.m_Walls)
                 {
                     // TODO: "hard" intersection criterion won't work in every case as soon as
@@ -133,24 +136,43 @@ public:
                     // is a bit overkill
                     // Note: SegmentSegment intersection won't return true if input segments are colinear, even if they
                     // do intersect, so calling this function works here
-                    Vertex dummy;
-                    if (SegmentSegmentIntersection(thisWall.m_VertexFrom, thisWall.m_VertexTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, dummy))
+                    Vertex intersection;
+                    if (SegmentSegmentIntersection(thisWall.m_VertexFrom, thisWall.m_VertexTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection) &&
+                        !(intersection == thisWall.m_VertexFrom) && !(intersection == thisWall.m_VertexTo) &&
+                        !(intersection == otherWall.m_VertexFrom) && !(intersection == otherWall.m_VertexTo))
                     {
                         ret = Relationship::PARTIAL;
                         break;
                     }
 
-                    if(WhichSide(otherWall.m_VertexFrom, otherWall.m_VertexTo, thisVertex) < 0)
+                    if(VertexOnXYAlignedSegment(otherWall.m_VertexFrom, otherWall.m_VertexTo, thisVertex))
                     {
-                        isInside = false;
+                        nbOnOutline++;
+                        onOutline = true;
                         break;
+                    }
+                    else
+                    {
+                        // TODO: Extremely non-robust, implement a voting system or we might miss out on outside vertices
+                        Vertex halfLineTo = thisVertex;
+                        halfLineTo.m_X += 100;
+                        halfLineTo.m_Y += 52;
+
+                        Vertex intersection;
+                        if (HalfLineSegmentIntersection(thisVertex, halfLineTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection))
+                        {
+                            nbIntersectionsAlongYPositive++;
+                        }
                     }
                 }
 
-                if(isInside)
-                    nbInside++;
-                else
-                    nbOutside++;
+                if (!onOutline)
+                {
+                    if (nbIntersectionsAlongYPositive % 2 == 1)
+                        nbInside++;
+                    else
+                        nbOutside++;
+                }
 
                 if(nbInside > 0 && nbOutside > 0)
                     ret = Relationship::PARTIAL;
@@ -159,9 +181,9 @@ public:
                     break;
             }
 
-            if(nbInside == m_Walls.size())
+            if((nbInside + nbOnOutline) == m_Walls.size())
                 ret = Relationship::INSIDE;
-            else if(nbOutside == m_Walls.size())
+            else if((nbOutside + nbOnOutline) == m_Walls.size())
                 ret = Relationship::UNDETERMINED;
             else
                 ret = Relationship::PARTIAL;
@@ -229,6 +251,7 @@ MapBuildData::ErrorCode SectorInclusionOperator::Run()
 {
     MapBuildData::ErrorCode ret = MapBuildData::ErrorCode::OK;
 
+    ResetIsInsideMatrix();
     for (unsigned int i = 0; i < m_Sectors.size(); i++)
     {
         for (unsigned int j = 0; j < m_Sectors.size(); j++)
@@ -247,6 +270,34 @@ MapBuildData::ErrorCode SectorInclusionOperator::Run()
 
     if(ret != MapBuildData::ErrorCode::OK)
         return ret;
+
+    std::vector<unsigned int> nbOfContainingSectors(m_Sectors.size(), 0u);
+    for (unsigned int i = 0; i < m_Sectors.size(); i++)
+    {
+        for (unsigned j = 0; j < m_Sectors.size(); j++)
+        {
+            if (m_IsInsideMatrix[i][j])
+                nbOfContainingSectors[i]++;
+        }
+    }
+
+    for (unsigned int i = 0; i < m_Sectors.size(); i++)
+    {
+        if(nbOfContainingSectors[i] > 0)
+        {
+            for (unsigned int j = 0; j < m_Sectors.size(); j++)
+            {
+                if (m_IsInsideMatrix[i][j] && (nbOfContainingSectors[j] == nbOfContainingSectors[i] - 1))
+                {
+                    for(const MapBuildData::Wall &wall : m_Sectors[i].m_Walls)
+                    {
+                        MapBuildData::Wall &mutableWall = const_cast<MapBuildData::Wall &>(wall);
+                        mutableWall.m_OutSector = j;
+                    }
+                }
+            }
+        }
+    }
 
     return ret;
 }
@@ -400,32 +451,40 @@ MapBuildData::ErrorCode MapBuildData::BuildPolygon(const Map::Data::Sector::Poly
 
 MapBuildData::ErrorCode MapBuildData::BuildKDTree(KDTreeMap *&oKDTree)
 {
-    std::set<Wall> allWalls;
-    for (unsigned int i = 0; i < m_Sectors.size(); i++)
+    SectorInclusionOperator inclusionOper(m_Sectors);
+    MapBuildData::ErrorCode ret = inclusionOper.Run();
+
+    if(ret == MapBuildData::ErrorCode::OK)
     {
-        for (const Wall &wall : m_Sectors[i].m_Walls)
+        std::set<Wall> allWalls;
+        for (unsigned int i = 0; i < m_Sectors.size(); i++)
         {
-            allWalls.insert(wall);
+            for (const Wall &wall : m_Sectors[i].m_Walls)
+            {
+                allWalls.insert(wall);
+            }
         }
+
+        oKDTree = new KDTreeMap;
+
+        oKDTree->m_PlayerStartX = m_pMapData->m_PlayerStartPosition.first;
+        oKDTree->m_PlayerStartY = m_pMapData->m_PlayerStartPosition.second;
+        oKDTree->m_PlayerStartDirection = m_pMapData->m_PlayerStartDirection;
+
+        oKDTree->m_RootNode = new KDTreeNode;
+
+        for (unsigned int i = 0; i < m_Sectors.size(); i++)
+        {
+            KDMapData::Sector sector;
+            sector.ceiling = m_Sectors[i].m_Ceiling;
+            sector.floor = m_Sectors[i].m_Floor;
+            oKDTree->m_Sectors.push_back(sector);
+        }
+
+        ret = RecursiveBuildKDTree(allWalls, KDTreeNode::SplitPlane::XConst, oKDTree->m_RootNode);
     }
 
-    oKDTree = new KDTreeMap;
-
-    oKDTree->m_PlayerStartX = m_pMapData->m_PlayerStartPosition.first;
-    oKDTree->m_PlayerStartY = m_pMapData->m_PlayerStartPosition.second;
-    oKDTree->m_PlayerStartDirection = m_pMapData->m_PlayerStartDirection;
-
-    oKDTree->m_RootNode = new KDTreeNode;
-
-    for (unsigned int i = 0; i < m_Sectors.size(); i++)
-    {
-        KDMapData::Sector sector;
-        sector.ceiling = m_Sectors[i].m_Ceiling;
-        sector.floor = m_Sectors[i].m_Floor;
-        oKDTree->m_Sectors.push_back(sector);
-    }
-
-    return RecursiveBuildKDTree(allWalls, KDTreeNode::SplitPlane::XConst, oKDTree->m_RootNode);
+    return ret;
 }
 
 MapBuildData::ErrorCode MapBuildData::RecursiveBuildKDTree(std::set<MapBuildData::Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, KDTreeNode *&ioKDTreeNode)

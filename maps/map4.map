@@ -1,0 +1,65 @@
+player
+{
+    start
+    {
+        position {50, 52}
+        direction {180}
+    }
+}
+
+sector
+{
+    outline
+    {
+        vertices {{0, 0} {0, 100} {100, 100} {100, 0} {300, 0} {300, -300} {100, -300} 
+        {100, -350} {250, -350} {250, -400} {0, -400} {0, -300} {-200, -300} {-200, 0}}
+    }
+
+    elevation
+    {
+        ceiling {200}
+        floor {15}
+    }
+}
+
+sector
+{
+    outline
+    {
+        vertices {{100, -100} {200, -100} {200, -200} {100, -200}}
+    }
+
+    elevation
+    {
+        ceiling {200}
+        floor {100}
+    }
+}
+
+sector
+{
+    outline
+    {
+        vertices {{150, -150} {190, -150} {190, -190} {150, -190}}
+    }
+
+    elevation
+    {
+        ceiling {200}
+        floor {100}
+    }
+}
+
+sector
+{
+    outline
+    {
+        vertices {{170, -170} {190, -170} {190, -190} {170, -190}}
+    }
+
+    elevation
+    {
+        ceiling {200}
+        floor {100}
+    }
+}

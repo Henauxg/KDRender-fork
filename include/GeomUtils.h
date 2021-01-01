@@ -2,6 +2,7 @@
 #define GeomUtils_h
 
 #include <cmath>
+#include <algorithm>
 
 #include "Consts.h"
 
@@ -190,6 +191,25 @@ bool SegmentSegmentIntersection(const Vertex &iV1, const Vertex &iV2, const Vert
 
         return true;
     }
+}
+
+template <typename Vertex>
+bool VertexOnXYAlignedSegment(Vertex iV1, Vertex iV2, const Vertex &iPoint)
+{
+    if (iV1.m_X == iV2.m_X && iPoint.m_X == iV1.m_X)
+    {
+        if(iV1.m_Y > iV2.m_Y)
+            std::swap(iV1, iV2);
+        return iV1.m_Y <= iPoint.m_Y && iPoint.m_Y <= iV2.m_Y;
+    }
+    else if (iV1.m_Y == iV2.m_Y && iPoint.m_Y == iV1.m_Y)
+    {
+        if (iV1.m_X > iV2.m_X)
+            std::swap(iV1, iV2);
+        return iV1.m_X <= iPoint.m_X && iPoint.m_X <= iV2.m_X;
+    }
+    else
+        return false;
 }
 
 template <typename Number>
