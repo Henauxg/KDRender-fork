@@ -2,6 +2,7 @@
 #define KDTreeRenderer_h
 
 #include "KDTreeMap.h"
+#include "Consts.h"
 
 class KDTreeRenderer
 {
@@ -48,6 +49,13 @@ protected:
     void Render();
     void RenderNode(KDTreeNode *pNode);
     void RenderWall(const Wall &iWall, const Vertex &iMinVertex, const Vertex &iMaxVertex, int iMinAngle, int iMaxAngle);
+    inline void ComputeRenderParameters(int iX, int iMinX, int iMaxX,
+                                        int iMinVertexBottomPixel, int iMaxVertexBottomPixel,
+                                        int iMinVertexTopPixel, int iMaxVertexTopPixel,
+                                        int &oT, int &oMinY, int &oMaxY) const;
+    inline void RenderColumn(int iT, int iMinVertexColor, int iMaxVertexColor,
+                             int iMinY, int iMaxY, int iX,
+                             int iR, int iG, int iB);
 
 protected:
     bool isInsideFrustum(const Vertex &iVertex) const;
@@ -79,6 +87,29 @@ void KDTreeRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigne
     m_pFrameBuffer[idx] = r;
     m_pFrameBuffer[idx + 1u] = g;
     m_pFrameBuffer[idx + 2u] = b;
+}
+
+void KDTreeRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX,
+                                             int iMinVertexBottomPixel, int iMaxVertexBottomPixel,
+                                             int iMinVertexTopPixel, int iMaxVertexTopPixel,
+                                             int &oT, int &oMinY, int &oMaxY) const
+{
+    oT = ((iX - iMinX) * (1 << DECIMAL_SHIFT)) / (iMaxX - iMinX);
+    oMinY = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - oT) * iMinVertexBottomPixel + oT * iMaxVertexBottomPixel), DECIMAL_SHIFT);
+    oMaxY = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - oT) * iMinVertexTopPixel + oT * iMaxVertexTopPixel), DECIMAL_SHIFT);
+    oMinY = std::max<int>(oMinY, m_pBottomOcclusionBuffer[iX]);
+    oMaxY = std::min<int>(oMaxY, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[iX]);
+}
+
+void KDTreeRenderer::RenderColumn(int iT, int iMinVertexColor, int iMaxVertexColor,
+                                  int iMinY, int iMaxY, int iX,
+                                  int iR, int iG, int iB)
+{
+    int color = ARITHMETIC_SHIFT((iMinVertexColor * ((1 << DECIMAL_SHIFT) - iT)) + iT * iMaxVertexColor, DECIMAL_SHIFT);
+    for (unsigned int y = iMinY; y <= iMaxY; y++)
+    {
+        WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + iX, color * iR, color * iG, color * iB);
+    }
 }
 
 #endif

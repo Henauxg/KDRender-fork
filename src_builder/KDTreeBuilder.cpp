@@ -120,65 +120,84 @@ public:
             unsigned int nbOnOutline = 0;
             unsigned int nbInside = 0;
             unsigned int nbOutside = 0;
-            for (const Wall &thisWall : m_Walls)
+            bool invalidLineIntersection = true;
+
+            // Had to ensure that the intersection line that is used to find out whether thisVertex is in the polygon
+            // doesn't cross a vertex of the polygon. 
+            for(int deltaYIntersectionLine = 0; deltaYIntersectionLine < 30 && invalidLineIntersection; deltaYIntersectionLine++)
             {
-                const Vertex &thisVertex = thisWall.m_VertexFrom;
-                bool onOutline = false;
+                Relationship ret = Relationship::UNDETERMINED;
+                nbOnOutline = 0;
+                nbInside = 0;
+                nbOutside = 0;
+                invalidLineIntersection = false;
 
-                // TODO: sort segments (in order to perform a binary search instead of linear)
-                unsigned int nbIntersectionsAlongYPositive = 0;
-                for (const Wall &otherWall : iSector2.m_Walls)
+                for (const Wall &thisWall : m_Walls)
                 {
-                    // TODO: "hard" intersection criterion won't work in every case as soon as
-                    // decimation takes textures into account
-                    // Leave it as is or find a better criterion?
-                    // TODO: since lines are either oX or oY aligned, calling generic SegmentSegment intersection
-                    // is a bit overkill
-                    // Note: SegmentSegment intersection won't return true if input segments are colinear, even if they
-                    // do intersect, so calling this function works here
-                    Vertex intersection;
-                    if (SegmentSegmentIntersection(thisWall.m_VertexFrom, thisWall.m_VertexTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection) &&
-                        !(intersection == thisWall.m_VertexFrom) && !(intersection == thisWall.m_VertexTo) &&
-                        !(intersection == otherWall.m_VertexFrom) && !(intersection == otherWall.m_VertexTo))
-                    {
-                        ret = Relationship::PARTIAL;
-                        break;
-                    }
+                    const Vertex &thisVertex = thisWall.m_VertexFrom;
+                    bool onOutline = false;
 
-                    if(VertexOnXYAlignedSegment(otherWall.m_VertexFrom, otherWall.m_VertexTo, thisVertex))
+                    // TODO: sort segments (in order to perform a binary search instead of linear)
+                    unsigned int nbIntersectionsAlongYPositive = 0;
+                    for (const Wall &otherWall : iSector2.m_Walls)
                     {
-                        nbOnOutline++;
-                        onOutline = true;
-                        break;
-                    }
-                    else
-                    {
-                        // TODO: Extremely non-robust, implement a voting system or we might miss out on outside vertices
-                        Vertex halfLineTo = thisVertex;
-                        halfLineTo.m_X += 100;
-                        halfLineTo.m_Y += 52;
-
+                        // TODO: "hard" intersection criterion won't work in every case as soon as
+                        // decimation takes textures into account
+                        // Leave it as is or find a better criterion?
+                        // TODO: since lines are either oX or oY aligned, calling generic SegmentSegment intersection
+                        // is a bit overkill
+                        // Note: SegmentSegment intersection won't return true if input segments are colinear, even if they
+                        // do intersect, so calling this function works here
                         Vertex intersection;
-                        if (HalfLineSegmentIntersection(thisVertex, halfLineTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection))
+                        if (SegmentSegmentIntersection(thisWall.m_VertexFrom, thisWall.m_VertexTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection) &&
+                            !(intersection == thisWall.m_VertexFrom) && !(intersection == thisWall.m_VertexTo) &&
+                            !(intersection == otherWall.m_VertexFrom) && !(intersection == otherWall.m_VertexTo))
                         {
-                            nbIntersectionsAlongYPositive++;
+                            ret = Relationship::PARTIAL;
+                            break;
+                        }
+
+                        if (VertexOnXYAlignedSegment(otherWall.m_VertexFrom, otherWall.m_VertexTo, thisVertex))
+                        {
+                            nbOnOutline++;
+                            onOutline = true;
+                            break;
+                        }
+                        else
+                        {
+                            Vertex halfLineTo = thisVertex;
+                            halfLineTo.m_X += 100;
+                            halfLineTo.m_Y += (50 + deltaYIntersectionLine);
+
+                            Vertex intersection;
+                            if (HalfLineSegmentIntersection(thisVertex, halfLineTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection))
+                            {
+                                if(intersection == thisWall.m_VertexFrom || intersection == thisWall.m_VertexTo ||
+                                   intersection == otherWall.m_VertexFrom || intersection == otherWall.m_VertexTo)
+                                {
+                                    invalidLineIntersection = true;
+                                    break;
+                                }
+
+                                nbIntersectionsAlongYPositive++;
+                            }
                         }
                     }
+                    
+                    if (!onOutline)
+                    {
+                        if (nbIntersectionsAlongYPositive % 2 == 1)
+                            nbInside++;
+                        else
+                            nbOutside++;
+                    }
+
+                    if (nbInside > 0 && nbOutside > 0)
+                        ret = Relationship::PARTIAL;
+
+                    if (ret == Relationship::PARTIAL)
+                        break;
                 }
-
-                if (!onOutline)
-                {
-                    if (nbIntersectionsAlongYPositive % 2 == 1)
-                        nbInside++;
-                    else
-                        nbOutside++;
-                }
-
-                if(nbInside > 0 && nbOutside > 0)
-                    ret = Relationship::PARTIAL;
-
-                if(ret == Relationship::PARTIAL)
-                    break;
             }
 
             if((nbInside + nbOnOutline) == m_Walls.size())
@@ -302,8 +321,84 @@ MapBuildData::ErrorCode SectorInclusionOperator::Run()
     return ret;
 }
 
-MapBuildData::MapBuildData() :
-    m_pMapData(nullptr)
+class EdgeBreakerOperator
+{
+public:
+    EdgeBreakerOperator(std::vector<MapBuildData::Sector> &iSectors);
+    virtual ~EdgeBreakerOperator();
+
+public:
+    MapBuildData::ErrorCode Run();
+
+protected:
+    bool BreakWall(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
+                   std::vector<MapBuildData::Wall> &oWalls) const;
+    bool BreakWallAcross(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
+                         std::vector<MapBuildData::Wall> &oWalls) const;
+    bool BreakWallAlong(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
+                        std::vector<MapBuildData::Wall> &oWalls) const;
+
+protected:
+    std::vector<MapBuildData::Sector> &m_Sectors;
+};
+
+EdgeBreakerOperator::EdgeBreakerOperator(std::vector<MapBuildData::Sector> &iSectors) :
+    m_Sectors(iSectors)
+{
+}
+
+EdgeBreakerOperator::~EdgeBreakerOperator()
+{
+}
+
+MapBuildData::ErrorCode EdgeBreakerOperator::Run()
+{
+    MapBuildData::ErrorCode ret = MapBuildData::ErrorCode::OK;
+
+    for(const MapBuildData::Sector &constSector : m_Sectors)
+    {
+        for (unsigned int i = 0; i < m_Sectors.size(); i++)
+        {
+
+        }
+    }
+
+    return ret;
+}
+
+bool EdgeBreakerOperator::BreakWall(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
+                                    std::vector<MapBuildData::Wall> &oWalls) const
+{
+    if ((iWallToBreak.m_VertexFrom.m_X == iWallToBreak.m_VertexTo.m_X) &&
+        (iWallConst.m_VertexFrom.m_Y == iWallConst.m_VertexTo.m_Y))
+    {
+        return BreakWallAcross(iWallToBreak, iWallConst, oWalls);
+    }
+    else if ((iWallToBreak.m_VertexFrom.m_Y == iWallToBreak.m_VertexTo.m_Y) &&
+             (iWallConst.m_VertexFrom.m_X == iWallConst.m_VertexTo.m_X))
+    {
+        return BreakWallAcross(iWallToBreak, iWallConst, oWalls);
+    }
+    else
+        return false;
+}
+
+bool EdgeBreakerOperator::BreakWallAcross(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
+                                          std::vector<MapBuildData::Wall> &oWalls) const
+{
+    // MapBuildData::Vertex intersection;
+    // if(SegmentSegmentIntersection(iWall.m_VertexFrom, iWall.m_VertexTo, ))
+
+    return false;
+}
+
+bool EdgeBreakerOperator::BreakWallAlong(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
+                                          std::vector<MapBuildData::Wall> &oWalls) const
+{
+    return false;
+}
+
+MapBuildData::MapBuildData() : m_pMapData(nullptr)
 {
 }
 
@@ -454,34 +549,40 @@ MapBuildData::ErrorCode MapBuildData::BuildKDTree(KDTreeMap *&oKDTree)
     SectorInclusionOperator inclusionOper(m_Sectors);
     MapBuildData::ErrorCode ret = inclusionOper.Run();
 
-    if(ret == MapBuildData::ErrorCode::OK)
+    if (ret == MapBuildData::ErrorCode::OK)
     {
-        std::set<Wall> allWalls;
-        for (unsigned int i = 0; i < m_Sectors.size(); i++)
+        EdgeBreakerOperator edgeBreakerOper(m_Sectors);
+        ret = edgeBreakerOper.Run();
+
+        if (ret == MapBuildData::ErrorCode::OK)
         {
-            for (const Wall &wall : m_Sectors[i].m_Walls)
+            std::set<Wall> allWalls;
+            for (unsigned int i = 0; i < m_Sectors.size(); i++)
             {
-                allWalls.insert(wall);
+                for (const Wall &wall : m_Sectors[i].m_Walls)
+                {
+                    allWalls.insert(wall);
+                }
             }
+
+            oKDTree = new KDTreeMap;
+
+            oKDTree->m_PlayerStartX = m_pMapData->m_PlayerStartPosition.first;
+            oKDTree->m_PlayerStartY = m_pMapData->m_PlayerStartPosition.second;
+            oKDTree->m_PlayerStartDirection = m_pMapData->m_PlayerStartDirection;
+
+            oKDTree->m_RootNode = new KDTreeNode;
+
+            for (unsigned int i = 0; i < m_Sectors.size(); i++)
+            {
+                KDMapData::Sector sector;
+                sector.ceiling = m_Sectors[i].m_Ceiling;
+                sector.floor = m_Sectors[i].m_Floor;
+                oKDTree->m_Sectors.push_back(sector);
+            }
+
+            ret = RecursiveBuildKDTree(allWalls, KDTreeNode::SplitPlane::XConst, oKDTree->m_RootNode);
         }
-
-        oKDTree = new KDTreeMap;
-
-        oKDTree->m_PlayerStartX = m_pMapData->m_PlayerStartPosition.first;
-        oKDTree->m_PlayerStartY = m_pMapData->m_PlayerStartPosition.second;
-        oKDTree->m_PlayerStartDirection = m_pMapData->m_PlayerStartDirection;
-
-        oKDTree->m_RootNode = new KDTreeNode;
-
-        for (unsigned int i = 0; i < m_Sectors.size(); i++)
-        {
-            KDMapData::Sector sector;
-            sector.ceiling = m_Sectors[i].m_Ceiling;
-            sector.floor = m_Sectors[i].m_Floor;
-            oKDTree->m_Sectors.push_back(sector);
-        }
-
-        ret = RecursiveBuildKDTree(allWalls, KDTreeNode::SplitPlane::XConst, oKDTree->m_RootNode);
     }
 
     return ret;

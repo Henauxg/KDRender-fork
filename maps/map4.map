@@ -32,7 +32,7 @@ sector
     elevation
     {
         ceiling {200}
-        floor {100}
+        floor {30}
     }
 }
 
@@ -46,7 +46,7 @@ sector
     elevation
     {
         ceiling {200}
-        floor {100}
+        floor {45}
     }
 }
 
@@ -60,6 +60,34 @@ sector
     elevation
     {
         ceiling {200}
-        floor {100}
+        floor {60}
+    }
+}
+
+sector
+{
+    outline
+    {
+        vertices {{-200, -200} {-200, -100} {-150, -100} {-150, -200}}
+    }
+
+    elevation
+    {
+        ceiling {150}
+        floor {-20}
+    }
+}
+
+sector
+{
+    outline
+    {
+        vertices {{300, -200} {300, -100} {450, -100} {450, -200}}
+    }
+
+    elevation
+    {
+        ceiling {140}
+        floor {70}
     }
 }
