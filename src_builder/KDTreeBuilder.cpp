@@ -19,6 +19,7 @@ public:
     {
         OK,
         INVALID_POLYGON,
+        SECTOR_INTERSECTION,
         UNKNOWN_FAILURE
     };
 
@@ -102,6 +103,71 @@ public:
 
         int m_Ceiling;
         int m_Floor;
+
+        enum class Relationship
+        {
+            INSIDE,
+            PARTIAL, // "hard" intersection
+            UNDETERMINED
+        };
+
+        // Returns the relationship between this and iSector2 (in this order)
+        Relationship FindRelationship(const Sector &iSector2) const
+        {
+            // TODO: there are smarter ways to work out inclusion
+            Relationship ret;
+
+            unsigned int nbInside = 0;
+            unsigned int nbOutside = 0;
+            for (const Wall &thisWall : m_Walls)
+            {
+                const Vertex &thisVertex = thisWall.m_VertexFrom;
+
+                bool isInside = true;
+                for (const Wall &otherWall : iSector2.m_Walls)
+                {
+                    // TODO: "hard" intersection criterion won't work in every case as soon as
+                    // decimation takes textures into account
+                    // Leave it as is or find a better criterion?
+                    // TODO: since lines are either oX or oY aligned, calling generic SegmentSegment intersection
+                    // is a bit overkill
+                    // Note: SegmentSegment intersection won't return true if input segments are colinear, even if they
+                    // do intersect, so calling this function works here
+                    Vertex dummy;
+                    if (SegmentSegmentIntersection(thisWall.m_VertexFrom, thisWall.m_VertexTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, dummy))
+                    {
+                        ret = Relationship::PARTIAL;
+                        break;
+                    }
+
+                    if(WhichSide(otherWall.m_VertexFrom, otherWall.m_VertexTo, thisVertex) < 0)
+                    {
+                        isInside = false;
+                        break;
+                    }
+                }
+
+                if(isInside)
+                    nbInside++;
+                else
+                    nbOutside++;
+
+                if(nbInside > 0 && nbOutside > 0)
+                    ret = Relationship::PARTIAL;
+
+                if(ret == Relationship::PARTIAL)
+                    break;
+            }
+
+            if(nbInside == m_Walls.size())
+                ret = Relationship::INSIDE;
+            else if(nbOutside == m_Walls.size())
+                ret = Relationship::UNDETERMINED;
+            else
+                ret = Relationship::PARTIAL;
+
+            return ret;
+        }
     };
 
 public:
@@ -123,7 +189,69 @@ protected:
     const Map::Data *m_pMapData;
 };
 
-MapBuildData::MapBuildData() : 
+class SectorInclusionOperator
+{
+public:
+    SectorInclusionOperator(const std::vector<MapBuildData::Sector> &iSectors);
+    virtual ~SectorInclusionOperator();
+
+public:
+    MapBuildData::ErrorCode Run();
+
+protected:
+    void ResetIsInsideMatrix();
+
+protected:
+    const std::vector<MapBuildData::Sector> &m_Sectors;
+    std::vector<std::vector<bool>> m_IsInsideMatrix;
+};
+
+SectorInclusionOperator::SectorInclusionOperator(const std::vector<MapBuildData::Sector> &iSectors) :
+    m_Sectors(iSectors),
+    m_IsInsideMatrix(iSectors.size())
+{
+}
+
+SectorInclusionOperator::~SectorInclusionOperator()
+{
+}
+
+void SectorInclusionOperator::ResetIsInsideMatrix()
+{
+    for (unsigned int i = 0; i < m_IsInsideMatrix.size(); i++)
+    {
+        m_IsInsideMatrix[i].clear();
+        m_IsInsideMatrix[i].resize(m_IsInsideMatrix.size(), false);
+    }
+}
+
+MapBuildData::ErrorCode SectorInclusionOperator::Run()
+{
+    MapBuildData::ErrorCode ret = MapBuildData::ErrorCode::OK;
+
+    for (unsigned int i = 0; i < m_Sectors.size(); i++)
+    {
+        for (unsigned int j = 0; j < m_Sectors.size(); j++)
+        {
+            if(j == i)
+                continue;
+
+            MapBuildData::Sector::Relationship rel = m_Sectors[i].FindRelationship(m_Sectors[j]);
+            if (rel == MapBuildData::Sector::Relationship::PARTIAL)
+                ret = MapBuildData::ErrorCode::SECTOR_INTERSECTION;
+
+            if (rel == MapBuildData::Sector::Relationship::INSIDE)
+                m_IsInsideMatrix[i][j] = true;
+        }
+    }
+
+    if(ret != MapBuildData::ErrorCode::OK)
+        return ret;
+
+    return ret;
+}
+
+MapBuildData::MapBuildData() :
     m_pMapData(nullptr)
 {
 }
@@ -155,6 +283,8 @@ MapBuildData::ErrorCode MapBuildData::SetMap(const Map &iMap)
 
         m_Sectors.push_back(sector);
     }
+
+    
 
     return ErrorCode::OK;
 }
