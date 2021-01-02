@@ -356,7 +356,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
             }
         };
 
-        if(outSector.ceiling < inSector.ceiling)
+        if ((whichSide > 0 && outSector.ceiling > inSector.ceiling) ||
+            (whichSide < 0 && outSector.ceiling < inSector.ceiling))
         {
             RenderTop();
             RenderBottom();
