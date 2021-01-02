@@ -359,7 +359,12 @@ MapBuildData::ErrorCode EdgeBreakerOperator::Run()
     {
         for (unsigned int i = 0; i < m_Sectors.size(); i++)
         {
+            std::set<MapBuildData::Wall> wallsToBreak(m_Sectors[i].m_Walls);
+            std::set<MapBuildData::Wall>::iterator wtbit(wallsToBreak.begin());
+            while(!wallsToBreak.empty())
+            {
 
+            }
         }
     }
 
@@ -368,32 +373,6 @@ MapBuildData::ErrorCode EdgeBreakerOperator::Run()
 
 bool EdgeBreakerOperator::BreakWall(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
                                     std::vector<MapBuildData::Wall> &oWalls) const
-{
-    if ((iWallToBreak.m_VertexFrom.m_X == iWallToBreak.m_VertexTo.m_X) &&
-        (iWallConst.m_VertexFrom.m_Y == iWallConst.m_VertexTo.m_Y))
-    {
-        return BreakWallAcross(iWallToBreak, iWallConst, oWalls);
-    }
-    else if ((iWallToBreak.m_VertexFrom.m_Y == iWallToBreak.m_VertexTo.m_Y) &&
-             (iWallConst.m_VertexFrom.m_X == iWallConst.m_VertexTo.m_X))
-    {
-        return BreakWallAcross(iWallToBreak, iWallConst, oWalls);
-    }
-    else
-        return false;
-}
-
-bool EdgeBreakerOperator::BreakWallAcross(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
-                                          std::vector<MapBuildData::Wall> &oWalls) const
-{
-    // MapBuildData::Vertex intersection;
-    // if(SegmentSegmentIntersection(iWall.m_VertexFrom, iWall.m_VertexTo, ))
-
-    return false;
-}
-
-bool EdgeBreakerOperator::BreakWallAlong(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
-                                          std::vector<MapBuildData::Wall> &oWalls) const
 {
     return false;
 }

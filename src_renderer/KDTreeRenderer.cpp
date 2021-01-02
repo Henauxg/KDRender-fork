@@ -254,102 +254,117 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     }
     else if (outSectorIdx != -1)
     {
-        // Render bottom part of the sector
-        // TODO: /!\ CAREFUL when adding flat surfaces, need to add them even if inSector.floor == outSector.floor
-        if(inSector.floor != outSector.floor)
+        auto RenderBottom = [&]() {
+            // Render bottom part of the sector
+            // TODO: /!\ CAREFUL when adding flat surfaces, need to add them even if inSector.floor == outSector.floor
+            if (inSector.floor != outSector.floor)
+            {
+                int eyeToTopFloor = m_PlayerZ - std::max(inSector.floor, outSector.floor);
+                int eyeToBottomFloor = m_PlayerZ - std::min(inSector.floor, outSector.floor);
+
+                int minVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottomFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int minVertexTopPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToTopFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+
+                int maxVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottomFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int maxVertexTopPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToTopFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+
+                if ((whichSide > 0 && inSector.floor < outSector.floor) ||
+                    (whichSide < 0 && outSector.floor < inSector.floor))
+                {
+
+                    for (unsigned int x = minX; x < maxX; x++)
+                    {
+                        // TODO: optimize divisions
+                        if (!m_pHorizOcclusionBuffer[x])
+                        {
+                            ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
+                            if (minY <= maxY)
+                            {
+                                RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
+                                m_pBottomOcclusionBuffer[x] = maxY;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    for (unsigned int x = minX; x < maxX; x++)
+                    {
+                        // TODO: optimize divisions
+                        if (!m_pHorizOcclusionBuffer[x])
+                        {
+                            ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
+                            if (minY <= maxY)
+                            {
+                                RenderColumn(t, minVertexColor, maxVertexColor, std::max(0, maxY - 1), maxY, x, r, g, b);
+                                m_pBottomOcclusionBuffer[x] = maxY;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        auto RenderTop = [&]() {
+            // Render top part of the sector
+            // TODO: /!\ CAREFUL when adding flat surfaces, need to add them even if inSector.ceiling == outSector.ceiling
+            if (inSector.ceiling != outSector.ceiling)
+            {
+                int eyeToTopCeiling = std::max(inSector.ceiling, outSector.ceiling) - m_PlayerZ;
+                int eyeToBottomCeiling = std::min(inSector.ceiling, outSector.ceiling) - m_PlayerZ;
+
+                int minVertexBottomPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToBottomCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int minVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTopCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+
+                int maxVertexBottomPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToBottomCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int maxVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTopCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+
+                if ((whichSide > 0 && inSector.ceiling > outSector.ceiling) ||
+                    (whichSide < 0 && outSector.ceiling > inSector.ceiling))
+                {
+
+                    for (unsigned int x = minX; x < maxX; x++)
+                    {
+                        // TODO: optimize divisions
+                        if (!m_pHorizOcclusionBuffer[x])
+                        {
+                            ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
+                            if (minY <= maxY)
+                            {
+                                RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
+                                m_pTopOcclusionBuffer[x] = WINDOW_HEIGHT - 1 - minY;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    for (unsigned int x = minX; x < maxX; x++)
+                    {
+                        // TODO: optimize divisions
+                        if (!m_pHorizOcclusionBuffer[x])
+                        {
+                            ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
+                            if (minY <= maxY)
+                            {
+                                RenderColumn(t, minVertexColor, maxVertexColor, minY, std::min(WINDOW_HEIGHT - 1, minY + 1), x, r, g, b);
+                                m_pTopOcclusionBuffer[x] = WINDOW_HEIGHT - 1 - minY;
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        if(outSector.ceiling < inSector.ceiling)
         {
-            int eyeToTopFloor = m_PlayerZ - std::max(inSector.floor, outSector.floor);
-            int eyeToBottomFloor = m_PlayerZ - std::min(inSector.floor, outSector.floor);
-
-            int minVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottomFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-            int minVertexTopPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToTopFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-
-            int maxVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottomFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-            int maxVertexTopPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToTopFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-
-            if ((whichSide > 0 && inSector.floor < outSector.floor) ||
-                (whichSide < 0 && outSector.floor < inSector.floor))
-            {
-
-                for (unsigned int x = minX; x < maxX; x++)
-                {
-                    // TODO: optimize divisions
-                    if (!m_pHorizOcclusionBuffer[x])
-                    {
-                        ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
-                        if (minY <= maxY)
-                        {
-                            RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
-                            m_pBottomOcclusionBuffer[x] = maxY;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (unsigned int x = minX; x < maxX; x++)
-                {
-                    // TODO: optimize divisions
-                    if (!m_pHorizOcclusionBuffer[x])
-                    {
-                        ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
-                        if (minY <= maxY)
-                        {
-                            RenderColumn(t, minVertexColor, maxVertexColor, std::max(0, maxY - 1), maxY, x, r, g, b);
-                            m_pBottomOcclusionBuffer[x] = maxY;
-                        }
-                    }
-                }
-            }
+            RenderTop();
+            RenderBottom();
         }
-
-        // Render top part of the sector
-        // TODO: /!\ CAREFUL when adding flat surfaces, need to add them even if inSector.ceiling == outSector.ceiling
-        if(inSector.ceiling != outSector.ceiling)
+        else
         {
-            int eyeToTopCeiling = std::max(inSector.ceiling, outSector.ceiling) - m_PlayerZ;
-            int eyeToBottomCeiling = std::min(inSector.ceiling, outSector.ceiling) - m_PlayerZ;
-
-            int minVertexBottomPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToBottomCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-            int minVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTopCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-
-            int maxVertexBottomPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToBottomCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-            int maxVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTopCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-
-            if ((whichSide > 0 && inSector.ceiling > outSector.ceiling) ||
-                (whichSide < 0 && outSector.ceiling > inSector.ceiling))
-            {
-
-                for (unsigned int x = minX; x < maxX; x++)
-                {
-                    // TODO: optimize divisions
-                    if (!m_pHorizOcclusionBuffer[x])
-                    {
-                        ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
-                        if (minY <= maxY)
-                        {
-                            RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
-                            m_pTopOcclusionBuffer[x] = WINDOW_HEIGHT - 1 - minY;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                for (unsigned int x = minX; x < maxX; x++)
-                {
-                    // TODO: optimize divisions
-                    if (!m_pHorizOcclusionBuffer[x])
-                    {
-                        ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
-                        if (minY <= maxY)
-                        {
-                            RenderColumn(t, minVertexColor, maxVertexColor, minY, std::min(WINDOW_HEIGHT - 1, minY + 1), x, r, g, b);
-                            m_pTopOcclusionBuffer[x] = WINDOW_HEIGHT - 1 - minY;
-                        }
-                    }
-                }
-            }
+            RenderBottom();
+            RenderTop();
         }
     }
 }
