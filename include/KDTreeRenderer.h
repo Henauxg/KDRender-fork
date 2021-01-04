@@ -48,6 +48,9 @@ public:
             memset(m_MaxY, 0, sizeof(int) * WINDOW_WIDTH);
         }
 
+        int m_MinX;
+        int m_MaxX;
+
         int m_MinY[WINDOW_WIDTH];
         int m_MaxY[WINDOW_WIDTH];
 
