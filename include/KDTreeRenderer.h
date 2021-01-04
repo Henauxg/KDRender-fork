@@ -3,6 +3,7 @@
 
 #include "KDTreeMap.h"
 #include "Consts.h"
+#include <cstring>
 
 class KDTreeRenderer
 {
@@ -35,6 +36,23 @@ public:
         Vertex m_VertexTo;
 
         const KDMapData::Wall *m_pKDWall;
+    };
+
+    // Totally doom-inspired (Doom call these 'Visplanes')
+    // See Fabien Sanglard's really good book about the Doom Engine :)
+    struct Surface
+    {
+        Surface()
+        {
+            memset(m_MinY, WINDOW_HEIGHT, sizeof(int) * WINDOW_WIDTH);
+            memset(m_MaxY, 0, sizeof(int) * WINDOW_WIDTH);
+        }
+
+        int m_MinY[WINDOW_WIDTH];
+        int m_MaxY[WINDOW_WIDTH];
+
+        int m_Height;
+        int m_SectorIdx;
     };
 
 public:
@@ -122,6 +140,7 @@ void KDTreeRenderer::RenderColumn(int iT, int iMinVertexColor, int iMaxVertexCol
                                   int iR, int iG, int iB)
 {
     int color = ARITHMETIC_SHIFT((iMinVertexColor * ((1 << DECIMAL_SHIFT) - iT)) + iT * iMaxVertexColor, DECIMAL_SHIFT);
+    // int color = ARITHMETIC_SHIFT(iT * 255, DECIMAL_SHIFT);
     for (unsigned int y = iMinY; y <= iMaxY; y++)
     {
         WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + iX, color * iR, color * iG, color * iB);

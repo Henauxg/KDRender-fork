@@ -58,7 +58,7 @@ const unsigned char* KDTreeRenderer::GetFrameBuffer() const
     return m_pFrameBuffer;
 }
 
-unsigned char *KDTreeRenderer::GetFrameBuffer() 
+unsigned char *KDTreeRenderer::GetFrameBuffer()
 {
     return m_pFrameBuffer;
 }
@@ -291,6 +291,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                     for (unsigned int x = minX; x < maxX; x++)
                     {
                         // TODO: optimize divisions
+                        // TODO: compute maxY only
                         if (!m_pHorizOcclusionBuffer[x])
                         {
                             ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
@@ -342,6 +343,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                     for (unsigned int x = minX; x < maxX; x++)
                     {
                         // TODO: optimize divisions
+                        // TODO: compute minY only
                         if (!m_pHorizOcclusionBuffer[x])
                         {
                             ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
