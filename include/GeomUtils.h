@@ -123,6 +123,8 @@ int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
 // Thanks to http://flassari.is/2008/11/line-line-intersection-in-cplusplus/ for writing
 // this boiler-plate piece of code for me
 // Note: this function returns false if lines are colinear, even if they are the same
+// TODO: raised default precision to 64-bit integers, which kind of sucks. Won't need to
+// to this anymore when we finally implement a clean fixed-point arithmetic API
 template <typename Vertex, typename Intermediate = int64_t>
 bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
 {

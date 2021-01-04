@@ -149,7 +149,7 @@ public:
             unsigned int nbOutside = 0;
             bool invalidLineIntersection = true;
 
-            // Had to ensure that the intersection line that is used to find out whether thisVertex is in the polygon
+            // Had to ensure that the intersection half-line that is used to find out whether thisVertex is in the polygon
             // doesn't cross a vertex of the polygon. 
             for(int deltaYIntersectionLine = 0; deltaYIntersectionLine < 30 && invalidLineIntersection; deltaYIntersectionLine++)
             {
@@ -159,13 +159,17 @@ public:
                 nbOutside = 0;
                 invalidLineIntersection = false;
 
+                // Count the number of intersections between an input half line (that has thisVertex as origin)
+                // and the other sector
+                // If even: thisVertex is outside the other sector
+                // If odd: thisVerteix is inside the other sector
                 for (const Wall &thisWall : m_Walls)
                 {
                     const Vertex &thisVertex = thisWall.m_VertexFrom;
                     bool onOutline = false;
 
                     // TODO: sort segments (in order to perform a binary search instead of linear)
-                    unsigned int nbIntersectionsAlongYPositive = 0;
+                    unsigned int nbIntersectionsAlongHalfLine = 0;
                     for (const Wall &otherWall : iSector2.m_Walls)
                     {
                         // TODO: "hard" intersection criterion won't work in every case as soon as
@@ -206,14 +210,14 @@ public:
                                     break;
                                 }
 
-                                nbIntersectionsAlongYPositive++;
+                                nbIntersectionsAlongHalfLine++;
                             }
                         }
                     }
                     
                     if (!onOutline)
                     {
-                        if (nbIntersectionsAlongYPositive % 2 == 1)
+                        if (nbIntersectionsAlongHalfLine % 2 == 1)
                             nbInside++;
                         else
                             nbOutside++;
@@ -670,6 +674,12 @@ MapBuildData::ErrorCode MapBuildData::BuildPolygon(const Map::Data::Sector::Poly
     if(error != ErrorCode::OK)
         return error;
 
+    // Decimate vertices
+    // This is useful in order to detect "hard" sector intersections and raise an
+    // error when they occur
+    // TODO: When textures are supported, this step will have to be performed inside
+    // the inclusion solver only (we might accidentally remove information otherwise)
+
     std::list<Vertex>::iterator vit(decimatedVertices.begin());
     std::list<Vertex>::iterator vitNext;
     std::list<Vertex>::iterator vitPrev;
@@ -772,6 +782,9 @@ MapBuildData::ErrorCode MapBuildData::RecursiveBuildKDTree(std::set<MapBuildData
 
     if(!withinPlane.empty())
     {
+        // If there is more than one wall, we need to break the walls so there is no overlap
+        // Inner and outer sectors of each resulting piece of wall need to be computed using
+        // information about sector inclusions
         if(withinPlane.size() > 1)
         {
             // Unoptimized but who gives a fuck, it's the builder and it doesn't need to be so

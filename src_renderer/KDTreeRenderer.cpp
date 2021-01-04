@@ -194,6 +194,10 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
 
 void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, const Vertex &iMaxVertex, int iMinAngle, int iMaxAngle)
 {
+    // TODO: there has to be (multiple) way(s) to refactor this harder
+    // TODO: computations are ugly, need to write a clean fixed-point arithmetic class instead of doing
+    // shady things
+
     int minX = ((iMinAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV;
     int maxX = ((iMaxAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV;
     minX = Clamp(minX, 0, WINDOW_WIDTH - 1);
@@ -228,7 +232,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
 
     int t, minY, maxY;
 
-    // Hard wall
+    // Hard wall: no outer sector, which means nothing will be drawn behind this wall
     if (outSectorIdx == -1 && whichSide > 0)
     {
         int eyeToTop = inSector.ceiling - m_PlayerZ;
@@ -250,8 +254,10 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                     RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x ,r, g, b);
             }
         }
+        // Nothing will be drawn behind this wall
         memset(m_pHorizOcclusionBuffer + minX, 1u, maxX - minX);
     }
+    // Soft wall, what I believe the Doom engine calls "portals"
     else if (outSectorIdx != -1)
     {
         auto RenderBottom = [&]() {
@@ -374,7 +380,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
 
 int KDTreeRenderer::ComputeZ()
 {
-    return RecursiveComputeZ(m_Map.m_RootNode) + m_PlayerHeight;
+    return RecursiveComputeZ(m_Map.m_RootNode);
 }
 
 int KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
@@ -391,8 +397,8 @@ int KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
         positiveSide = m_PlayerPosition.m_Y > pNode->m_SplitOffset;
 
     // We are on a terminal node
-    // The node contains exactly one wall, which we are going to use
-    // to find out in which sector the player is
+    // The node contains exactly one wall (or multiple walls oriented similarly and refering
+    // to the same sectors), which we are going to use to find out in which sector the player is
     if ((positiveSide && !pNode->m_PositiveSide) ||
         (!positiveSide && !pNode->m_NegativeSide))
     {
@@ -404,13 +410,15 @@ int KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
             {
                 int outSector = wall.m_pKDWall->m_OutSector;
                 if (outSector >= 0)
-                    oZ = m_Map.m_Sectors[outSector].floor;
+                    oZ = m_Map.m_Sectors[outSector].floor + m_PlayerHeight;
+                oZ = Clamp(oZ, m_Map.m_Sectors[outSector].floor, m_Map.m_Sectors[outSector].ceiling);
             }
             else
             {
                 int inSector = wall.m_pKDWall->m_InSector;
                 if (inSector >= 0)
-                    oZ = m_Map.m_Sectors[inSector].floor;
+                    oZ = m_Map.m_Sectors[inSector].floor + m_PlayerHeight;
+                oZ = Clamp(oZ, m_Map.m_Sectors[inSector].floor, m_Map.m_Sectors[inSector].ceiling);
             }
         }
     }
