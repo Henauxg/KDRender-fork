@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <cstdint>
 
 #include "Consts.h"
 
@@ -122,23 +123,23 @@ int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
 // Thanks to http://flassari.is/2008/11/line-line-intersection-in-cplusplus/ for writing
 // this boiler-plate piece of code for me
 // Note: this function returns false if lines are colinear, even if they are the same
-template <typename Vertex>
+template <typename Vertex, typename Intermediate = int64_t>
 bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
 {
     // Store the values for fast access and easy
     // equations-to-code conversion
-    int x1 = iV1.m_X, x2 = iV2.m_X, x3 = iV3.m_X, x4 = iV4.m_X;
-    int y1 = iV1.m_Y, y2 = iV2.m_Y, y3 = iV3.m_Y, y4 = iV4.m_Y;
+    Intermediate x1 = iV1.m_X, x2 = iV2.m_X, x3 = iV3.m_X, x4 = iV4.m_X;
+    Intermediate y1 = iV1.m_Y, y2 = iV2.m_Y, y3 = iV3.m_Y, y4 = iV4.m_Y;
 
-    int d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    Intermediate d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
     // If d is zero, there is no intersection
     if (d == 0)
         return false;
 
     // Get the x and y
-    int pre = (x1 * y2 - y1 * x2), post = (x3 * y4 - y3 * x4);
-    int x = (pre * (x3 - x4) - (x1 - x2) * post) / d;
-    int y = (pre * (y3 - y4) - (y1 - y2) * post) / d;
+    Intermediate pre = (x1 * y2 - y1 * x2), post = (x3 * y4 - y3 * x4);
+    Intermediate x = (pre * (x3 - x4) - (x1 - x2) * post) / d;
+    Intermediate y = (pre * (y3 - y4) - (y1 - y2) * post) / d;
 
     // Return the point of intersection
     oIntersection.m_X = x;
@@ -148,10 +149,10 @@ bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV
 
 // Really dirty, just wanted to try this out
 // TODO: code a real intersection solver
-template <typename Vertex>
+template <typename Vertex, typename Intermediate = int64_t>
 bool HalfLineSegmentIntersection(const Vertex &iHalfLineFrom, const Vertex &iHalfLineTo, const Vertex &iV1, const Vertex &iV2, Vertex &oIntersection)
 {
-    if (!LineLineIntersection(iHalfLineFrom, iHalfLineTo, iV1, iV2, oIntersection))
+    if (!LineLineIntersection<Vertex, Intermediate>(iHalfLineFrom, iHalfLineTo, iV1, iV2, oIntersection))
         return false;
     else
     {
@@ -170,10 +171,10 @@ bool HalfLineSegmentIntersection(const Vertex &iHalfLineFrom, const Vertex &iHal
 
 // As shitty as above
 // TODO: code a real intersection solver
-template <typename Vertex>
+template <typename Vertex, typename Intermediate = int64_t>
 bool SegmentSegmentIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
 {
-    if (!LineLineIntersection(iV1, iV2, iV3, iV4, oIntersection))
+    if (!LineLineIntersection<Vertex, Intermediate>(iV1, iV2, iV3, iV4, oIntersection))
         return false;
     else
     {

@@ -7,6 +7,6 @@
 #define DECIMAL_SHIFT 10
 #define ANGLE_SHIFT 7
 
-#define ARITHMETIC_SHIFT(nb, shift) ((nb) >> shift)
+#define ARITHMETIC_SHIFT(nb, shift) ((nb) >> (shift))
 
 #endif

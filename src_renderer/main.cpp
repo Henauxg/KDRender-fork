@@ -14,6 +14,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <thread>
 
 int main(int argc, char **argv)
 {
@@ -53,13 +54,15 @@ int main(int argc, char **argv)
     KDTreeRenderer::Vertex playerPos;
     playerPos.m_X = map.GetPlayerStartX();
     playerPos.m_Y = map.GetPlayerStartY();
+    unsigned posPlayerShift = 3u;
+    playerPos.LShift(posPlayerShift);
 
     int playerDir = map.GetPlayerStartDirection();
 
-    renderer.SetPlayerCoordinates(playerPos, playerDir);
+    renderer.SetPlayerCoordinates(playerPos.RShift(posPlayerShift), playerDir);
 
-    int dr = 10;
-    int dtheta = 5;
+    int dr = 3600 << posPlayerShift;
+    int dtheta = 180 << ANGLE_SHIFT;
 
     sf::RenderWindow app(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT),
                          "KDTree Map Renderer",
@@ -67,7 +70,6 @@ int main(int argc, char **argv)
     Screen screen(renderer);
     sf::Clock clock;
 
-    float deltaTMovement = 0.f;
     while (app.isOpen())
     {
         sf::Event event;
@@ -78,16 +80,17 @@ int main(int argc, char **argv)
         app.display();
 
         float deltaT = (float)(clock.getElapsedTime().asMilliseconds());
-        deltaTMovement += deltaT;
-
-        // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
-        clock.restart();
-
-        playerPos = renderer.GetPlayerPosition();
-        playerDir = renderer.GetPlayerDirection();
-
         int dPos = 0;
         int dDir = 0;
+
+        // 60 FPS cap
+        if(deltaT < (1000.f/60.f))
+            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(1000.f / 60.f - deltaT)));
+
+        deltaT = (float)(clock.getElapsedTime().asMilliseconds());
+        // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+
+        clock.restart();
 
         while (app.pollEvent(event))
         {
@@ -99,33 +102,33 @@ int main(int argc, char **argv)
             case sf::Event::KeyPressed:
                 if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q))
                 {
-                    dPos = -dr;
+                    dPos -= dr;
                 }
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
                 {
-                    dPos = dr;
+                    dPos += dr;
                 }
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::O))
                 {
-                    dPos = dr;
+                    dPos += dr;
                 }
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::L))
                 {
-                    dPos = -dr;
+                    dPos -= dr;
                 }
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::K))
                 {
-                    dDir = -dtheta;
+                    dDir -= dtheta;
                 }
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::M))
                 {
-                    dDir = +dtheta;
+                    dDir += dtheta;
                 }
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
                 {
                     std::cout << "Dumping player info:" << std::endl;
-                    std::cout << "x = " << playerPos.m_X << std::endl;
-                    std::cout << "y = " << playerPos.m_Y << std::endl;
+                    std::cout << "x = " << (playerPos.m_X >> posPlayerShift) << std::endl;
+                    std::cout << "y = " << (playerPos.m_Y >> posPlayerShift) << std::endl;
                     std::cout << "dir = " << playerDir << std::endl;
                 }
                 break;
@@ -134,24 +137,28 @@ int main(int argc, char **argv)
             }
         }
 
+        dPos = (dPos * static_cast<int>(deltaT)) / 1000;
+        dDir = (dDir * static_cast<int>(deltaT)) / 1000;
+
+        // if(dPos > 0)
+        //     std::cout << "dPos = " << dPos << std::endl;
+
         KDTreeRenderer::Vertex look(renderer.GetLook());
-        int dx = ARITHMETIC_SHIFT(((100 * dPos * (look.m_X - playerPos.m_X)) / 100), DECIMAL_SHIFT);
-        int dy = ARITHMETIC_SHIFT(((100 * dPos * (look.m_Y - playerPos.m_Y)) / 100), DECIMAL_SHIFT);
+        int dx = ARITHMETIC_SHIFT(((dPos * (look.m_X - (playerPos.m_X >> posPlayerShift)))), DECIMAL_SHIFT);
+        int dy = ARITHMETIC_SHIFT((dPos * (look.m_Y - (playerPos.m_Y >> posPlayerShift))), DECIMAL_SHIFT);
         playerPos.m_X += dx;
         playerPos.m_Y += dy;
 
         playerDir += dDir;
-        while(playerDir < 0)
-            playerDir += 360;
-        while(playerDir > 360)
-            playerDir -= 360;
+        while (playerDir < 0)
+            playerDir += 360 << ANGLE_SHIFT;
+        while (playerDir > (360 << ANGLE_SHIFT))
+            playerDir -= 360 << ANGLE_SHIFT;
 
-        renderer.SetPlayerCoordinates(playerPos, playerDir);
+        renderer.SetPlayerCoordinates(playerPos.RShift(posPlayerShift), playerDir);
+
         renderer.ClearBuffers();
         renderer.RefreshFrameBuffer();
-
-        if(deltaTMovement > 50)
-            deltaTMovement = 0;
     }
 
     return 0;

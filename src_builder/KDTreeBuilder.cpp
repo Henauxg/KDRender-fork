@@ -6,11 +6,13 @@
 
 #include <vector>
 #include <set>
-#include <map>
 #include <list>
 #include <iterator>
 #include <memory>
 #include <algorithm>
+
+// Ugly forward declaration :(
+class SectorInclusions;
 
 class MapBuildData
 {
@@ -20,6 +22,7 @@ public:
         OK,
         INVALID_POLYGON,
         SECTOR_INTERSECTION,
+        CANNOT_BREAK_WALL,
         UNKNOWN_FAILURE
     };
 
@@ -89,8 +92,32 @@ public:
         {
             if (!(iLeft.m_VertexFrom == iRight.m_VertexFrom))
                 return iLeft.m_VertexFrom < iRight.m_VertexFrom;
-            else
+            else if (!(iLeft.m_VertexTo == iRight.m_VertexTo))
                 return iLeft.m_VertexTo < iRight.m_VertexTo;
+            else if (iLeft.m_InSector != iRight.m_InSector)
+                return iLeft.m_InSector < iRight.m_InSector;
+            else
+                return iLeft.m_OutSector < iRight.m_OutSector;
+        }
+
+        bool IsGeomEqual(const Wall &iOtherWall)
+        {
+            return this->m_VertexFrom == iOtherWall.m_VertexFrom && this->m_VertexTo == iOtherWall.m_VertexTo;
+        }
+
+        bool IsGeomOpposite(const Wall &iOtherWall) const
+        {
+            return this->m_VertexFrom == iOtherWall.m_VertexTo && this->m_VertexTo == iOtherWall.m_VertexFrom;
+        }
+
+        unsigned int GetConstCoordinate() const
+        {
+            if (m_VertexFrom.m_X == m_VertexTo.m_X)
+                return 0;
+            else if (m_VertexFrom.m_Y == m_VertexTo.m_Y)
+                return 1;
+            else
+                return 2; // Invalid, should not happen
         }
 
         int m_InSector;
@@ -149,7 +176,7 @@ public:
                         // Note: SegmentSegment intersection won't return true if input segments are colinear, even if they
                         // do intersect, so calling this function works here
                         Vertex intersection;
-                        if (SegmentSegmentIntersection(thisWall.m_VertexFrom, thisWall.m_VertexTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection) &&
+                        if (SegmentSegmentIntersection<MapBuildData::Vertex, double>(thisWall.m_VertexFrom, thisWall.m_VertexTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection) &&
                             !(intersection == thisWall.m_VertexFrom) && !(intersection == thisWall.m_VertexTo) &&
                             !(intersection == otherWall.m_VertexFrom) && !(intersection == otherWall.m_VertexTo))
                         {
@@ -170,7 +197,7 @@ public:
                             halfLineTo.m_Y += (50 + deltaYIntersectionLine);
 
                             Vertex intersection;
-                            if (HalfLineSegmentIntersection(thisVertex, halfLineTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection))
+                            if (HalfLineSegmentIntersection<MapBuildData::Vertex, double>(thisVertex, halfLineTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection))
                             {
                                 if(intersection == thisWall.m_VertexFrom || intersection == thisWall.m_VertexTo ||
                                    intersection == otherWall.m_VertexFrom || intersection == otherWall.m_VertexTo)
@@ -222,7 +249,7 @@ public:
 protected:
     ErrorCode BuildSector(const Map::Data::Sector &iMapSector, Sector &oSector);
     ErrorCode BuildPolygon(const Map::Data::Sector::Polygon &iPolygon, int iDesiredOrientation, std::set<Wall> &oWalls);
-    ErrorCode RecursiveBuildKDTree(std::set<Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, KDTreeNode *&oKDTree);
+    ErrorCode RecursiveBuildKDTree(std::set<Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, const SectorInclusions &iSectorInclusions, KDTreeNode *&oKDTree);
     void SplitWallSet(std::set<Wall> &ioWalls, KDTreeNode::SplitPlane iSplitPlane, int &oSplitOffset, std::set<Wall> &oPositiveSide, std::set<Wall> &oNegativeSide, std::set<Wall> &oWithinSplitPlane);
 
 protected:
@@ -230,26 +257,67 @@ protected:
     const Map::Data *m_pMapData;
 };
 
-class SectorInclusionOperator
+class SectorInclusions
 {
 public:
-    SectorInclusionOperator(const std::vector<MapBuildData::Sector> &iSectors);
+    SectorInclusions() {}
+    virtual ~SectorInclusions() {}
+
+public:
+    int GetInnermostSector(int iSector1, int iSector2) const
+    {
+        if (iSector1 == -1)
+            return iSector2;
+        else if (iSector2 == -1)
+            return iSector1;
+        else if (m_NbOfContainingSectors[iSector1] < m_NbOfContainingSectors[iSector2])
+            return iSector2;
+        else
+            return iSector1;
+    }
+
+    int GetOutermostSector(int iSector1, int iSector2) const
+    {
+        if (iSector1 == -1)
+            return iSector1;
+        else if (iSector2 == -1)
+            return iSector2;
+        else if (m_NbOfContainingSectors[iSector1] < m_NbOfContainingSectors[iSector2])
+            return iSector1;
+        else
+            return iSector2;
+    }
+
+protected:
+    std::vector<int> m_SmallestContainingSectors;
+    std::vector<int> m_NbOfContainingSectors;
+
+private:
+    friend class SectorInclusionOperator;
+};
+
+class SectorInclusionOperator
+{
+    public : 
+    SectorInclusionOperator(std::vector<MapBuildData::Sector> &ioSectors);
     virtual ~SectorInclusionOperator();
 
 public:
     MapBuildData::ErrorCode Run();
+    const SectorInclusions &GetResult() const { return m_Result; }
 
 protected:
     void ResetIsInsideMatrix();
 
 protected:
-    const std::vector<MapBuildData::Sector> &m_Sectors;
+    std::vector<MapBuildData::Sector> &m_Sectors;
     std::vector<std::vector<bool>> m_IsInsideMatrix;
+    SectorInclusions m_Result;
 };
 
-SectorInclusionOperator::SectorInclusionOperator(const std::vector<MapBuildData::Sector> &iSectors) :
-    m_Sectors(iSectors),
-    m_IsInsideMatrix(iSectors.size())
+SectorInclusionOperator::SectorInclusionOperator(std::vector<MapBuildData::Sector> &ioSectors) :
+    m_Sectors(ioSectors),
+    m_IsInsideMatrix(ioSectors.size())
 {
 }
 
@@ -290,28 +358,32 @@ MapBuildData::ErrorCode SectorInclusionOperator::Run()
     if(ret != MapBuildData::ErrorCode::OK)
         return ret;
 
-    std::vector<unsigned int> nbOfContainingSectors(m_Sectors.size(), 0u);
+    m_Result.m_NbOfContainingSectors.resize(m_Sectors.size(), 0u);
+    m_Result.m_SmallestContainingSectors.resize(m_Sectors.size(), -1);
+
     for (unsigned int i = 0; i < m_Sectors.size(); i++)
     {
         for (unsigned j = 0; j < m_Sectors.size(); j++)
         {
             if (m_IsInsideMatrix[i][j])
-                nbOfContainingSectors[i]++;
+                m_Result.m_NbOfContainingSectors[i]++;
         }
     }
 
     for (unsigned int i = 0; i < m_Sectors.size(); i++)
     {
-        if(nbOfContainingSectors[i] > 0)
+        if (m_Result.m_NbOfContainingSectors[i] > 0)
         {
             for (unsigned int j = 0; j < m_Sectors.size(); j++)
             {
-                if (m_IsInsideMatrix[i][j] && (nbOfContainingSectors[j] == nbOfContainingSectors[i] - 1))
+                if (m_IsInsideMatrix[i][j] &&
+                 (m_Result.m_NbOfContainingSectors[j] == m_Result.m_NbOfContainingSectors[i] - 1))
                 {
                     for(const MapBuildData::Wall &wall : m_Sectors[i].m_Walls)
                     {
                         MapBuildData::Wall &mutableWall = const_cast<MapBuildData::Wall &>(wall);
                         mutableWall.m_OutSector = j;
+                        m_Result.m_SmallestContainingSectors[i] = j;
                     }
                 }
             }
@@ -321,60 +393,176 @@ MapBuildData::ErrorCode SectorInclusionOperator::Run()
     return ret;
 }
 
-class EdgeBreakerOperator
+class WallBreakerOperator
 {
 public:
-    EdgeBreakerOperator(std::vector<MapBuildData::Sector> &iSectors);
-    virtual ~EdgeBreakerOperator();
+    WallBreakerOperator(std::vector<MapBuildData::Wall> &iWalls, const SectorInclusions &iSectorInclusions);
+    virtual ~WallBreakerOperator();
 
 public:
-    MapBuildData::ErrorCode Run();
+    MapBuildData::ErrorCode Run(std::vector<MapBuildData::Wall> &oWalls);
 
 protected:
-    bool BreakWall(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
-                   std::vector<MapBuildData::Wall> &oWalls) const;
-    bool BreakWallAcross(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
-                         std::vector<MapBuildData::Wall> &oWalls) const;
-    bool BreakWallAlong(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
-                        std::vector<MapBuildData::Wall> &oWalls) const;
+    bool SplitWall(MapBuildData::Wall iWall, const MapBuildData::Vertex &iVertex,
+                   MapBuildData::Wall &oMinWall, MapBuildData::Wall &oMaxWall) const;
 
 protected:
-    std::vector<MapBuildData::Sector> &m_Sectors;
+    std::vector<MapBuildData::Wall> &m_Walls;
+    const SectorInclusions &m_SectorInclusions;
 };
 
-EdgeBreakerOperator::EdgeBreakerOperator(std::vector<MapBuildData::Sector> &iSectors) :
-    m_Sectors(iSectors)
+WallBreakerOperator::WallBreakerOperator(std::vector<MapBuildData::Wall> &iWalls,
+                                         const SectorInclusions &iSectorInclusions) : 
+    m_Walls(iWalls),
+    m_SectorInclusions(iSectorInclusions)
 {
 }
 
-EdgeBreakerOperator::~EdgeBreakerOperator()
+WallBreakerOperator::~WallBreakerOperator()
 {
 }
 
-MapBuildData::ErrorCode EdgeBreakerOperator::Run()
+MapBuildData::ErrorCode WallBreakerOperator::Run(std::vector<MapBuildData::Wall> &oWalls)
 {
     MapBuildData::ErrorCode ret = MapBuildData::ErrorCode::OK;
 
-    for(const MapBuildData::Sector &constSector : m_Sectors)
-    {
-        for (unsigned int i = 0; i < m_Sectors.size(); i++)
-        {
-            std::set<MapBuildData::Wall> wallsToBreak(m_Sectors[i].m_Walls);
-            std::set<MapBuildData::Wall>::iterator wtbit(wallsToBreak.begin());
-            while(!wallsToBreak.empty())
-            {
+    if(m_Walls.empty())
+        return ret;
 
+    unsigned int constCoord, varCoord;
+    constCoord = m_Walls[0].GetConstCoordinate();
+    varCoord = (constCoord + 1) % 2;
+    if (constCoord == 2) // Invalid result
+        return MapBuildData::ErrorCode::CANNOT_BREAK_WALL;
+
+    std::vector<MapBuildData::Vertex> sortedVertices;
+    sortedVertices.push_back(m_Walls[0].m_VertexFrom);
+    sortedVertices.push_back(m_Walls[0].m_VertexTo);
+
+    for (unsigned int i = 1; i < m_Walls.size(); i++)
+    {
+        if (m_Walls[i].m_VertexFrom.GetCoord(constCoord) != m_Walls[i].m_VertexTo.GetCoord(constCoord) ||
+            m_Walls[i].m_VertexFrom.GetCoord(constCoord) != m_Walls[0].m_VertexFrom.GetCoord(constCoord))
+            ret = MapBuildData::ErrorCode::CANNOT_BREAK_WALL;
+
+        sortedVertices.push_back(m_Walls[i].m_VertexFrom);
+        sortedVertices.push_back(m_Walls[i].m_VertexTo);
+    }
+
+    if (ret != MapBuildData::ErrorCode::OK)
+        return ret;
+
+    std::sort(sortedVertices.begin(), sortedVertices.end());
+    auto last = std::unique(sortedVertices.begin(), sortedVertices.end());
+    sortedVertices.erase(last, sortedVertices.end());
+
+    std::vector<MapBuildData::Wall> brokenWalls;
+
+    for (unsigned int i = 0; i < m_Walls.size(); i++)
+    {
+        MapBuildData::Wall currentWall = m_Walls[i];
+        for (unsigned int j = 1; j < sortedVertices.size(); j++)
+        {
+            MapBuildData::Wall minWall, maxWall;
+            if(SplitWall(currentWall, sortedVertices[j], minWall, maxWall))
+            {
+                brokenWalls.push_back(minWall);
+                currentWall = maxWall;
             }
         }
+        brokenWalls.push_back(currentWall);
+    }
+
+    // Find all subsets of walls that are geometrically equal. Each subset is replaced
+    // with a unique wall whose inner sector is the innermost sector of the whole set (same
+    // goes for the outer sector)
+    std::vector<MapBuildData::Wall> uniqueWalls;
+    for (unsigned int i = 0; i < brokenWalls.size(); i++)
+    {
+        int found = -1;
+        for (unsigned int j = 0; j < uniqueWalls.size(); j++)
+        {
+            if (brokenWalls[i].IsGeomEqual(uniqueWalls[j]))
+            {
+                found = j;
+                break;
+            }
+        }
+
+        if(found >= 0)
+        {
+            MapBuildData::Wall newWall = brokenWalls[i];
+            newWall.m_InSector = m_SectorInclusions.GetInnermostSector(brokenWalls[i].m_InSector, uniqueWalls[found].m_InSector);
+            newWall.m_OutSector = m_SectorInclusions.GetOutermostSector(brokenWalls[i].m_OutSector, uniqueWalls[found].m_OutSector);
+            uniqueWalls[found] = newWall;
+        }
+        else
+            uniqueWalls.push_back(brokenWalls[i]);
+    }
+
+    // Find all pair of walls that are geometrically opposed. Replace each pair with a unique
+    // wall with corresponding inner and outer sectors
+    for (unsigned int i = 0; i < uniqueWalls.size(); i++)
+    {
+        int found = -1;
+        for (unsigned int j = 0; j < oWalls.size(); j++)
+        {
+            if (uniqueWalls[i].IsGeomOpposite(oWalls[j]))
+            {
+                found = j;
+                break;
+            }
+        }
+
+        if (found >= 0)
+            oWalls[found].m_OutSector = uniqueWalls[i].m_InSector;
+        else
+            oWalls.push_back(uniqueWalls[i]);
     }
 
     return ret;
 }
 
-bool EdgeBreakerOperator::BreakWall(const MapBuildData::Wall &iWallToBreak, const MapBuildData::Wall &iWallConst,
-                                    std::vector<MapBuildData::Wall> &oWalls) const
+bool WallBreakerOperator::SplitWall(MapBuildData::Wall iWall, const MapBuildData::Vertex &iVertex,
+                                    MapBuildData::Wall &oMinWall, MapBuildData::Wall &oMaxWall) const
 {
-    return false;
+    bool hasBeenSplit = false;
+
+    unsigned int constCoord, varCoord;
+    constCoord = m_Walls[0].GetConstCoordinate();
+    varCoord = (constCoord + 1) % 2;
+    if (constCoord == 2) // Invalid result, should never happen
+        return false;
+
+    // Should never happen as well
+    if(iVertex.GetCoord(constCoord) != iWall.m_VertexFrom.GetCoord(constCoord) ||
+       iVertex.GetCoord(constCoord) != iWall.m_VertexTo.GetCoord(constCoord))
+        return false;
+
+    bool reverse = iWall.m_VertexFrom.GetCoord(varCoord) > iWall.m_VertexTo.GetCoord(varCoord);
+    if(reverse)
+        std::swap(iWall.m_VertexFrom, iWall.m_VertexTo);
+
+    // Vertex is strictly within input wall, break it
+    if(iWall.m_VertexFrom.GetCoord(varCoord) < iVertex.GetCoord(varCoord) && 
+    iVertex.GetCoord(varCoord) < iWall.m_VertexTo.GetCoord(varCoord))
+    {
+        oMinWall = MapBuildData::Wall(iWall);
+        oMaxWall = MapBuildData::Wall(iWall);
+
+        oMinWall.m_VertexTo.SetCoord(varCoord, iVertex.GetCoord(varCoord));
+        oMaxWall.m_VertexFrom.SetCoord(varCoord, iVertex.GetCoord(varCoord));
+
+        if(reverse)
+        {
+            std::swap(oMinWall.m_VertexFrom, oMinWall.m_VertexTo);
+            std::swap(oMaxWall.m_VertexFrom, oMaxWall.m_VertexTo);
+        }
+
+        hasBeenSplit = true;
+    }
+
+    return hasBeenSplit;
 }
 
 MapBuildData::MapBuildData() : m_pMapData(nullptr)
@@ -530,9 +718,6 @@ MapBuildData::ErrorCode MapBuildData::BuildKDTree(KDTreeMap *&oKDTree)
 
     if (ret == MapBuildData::ErrorCode::OK)
     {
-        EdgeBreakerOperator edgeBreakerOper(m_Sectors);
-        ret = edgeBreakerOper.Run();
-
         if (ret == MapBuildData::ErrorCode::OK)
         {
             std::set<Wall> allWalls;
@@ -560,14 +745,15 @@ MapBuildData::ErrorCode MapBuildData::BuildKDTree(KDTreeMap *&oKDTree)
                 oKDTree->m_Sectors.push_back(sector);
             }
 
-            ret = RecursiveBuildKDTree(allWalls, KDTreeNode::SplitPlane::XConst, oKDTree->m_RootNode);
+            ret = RecursiveBuildKDTree(allWalls, KDTreeNode::SplitPlane::XConst, inclusionOper.GetResult(), oKDTree->m_RootNode);
         }
     }
 
     return ret;
 }
 
-MapBuildData::ErrorCode MapBuildData::RecursiveBuildKDTree(std::set<MapBuildData::Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, KDTreeNode *&ioKDTreeNode)
+#include <iostream>
+MapBuildData::ErrorCode MapBuildData::RecursiveBuildKDTree(std::set<MapBuildData::Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, const SectorInclusions &iSectorInclusions, KDTreeNode *&ioKDTreeNode)
 {
     if(!ioKDTreeNode)
         return ErrorCode::UNKNOWN_FAILURE;
@@ -586,6 +772,28 @@ MapBuildData::ErrorCode MapBuildData::RecursiveBuildKDTree(std::set<MapBuildData
 
     if(!withinPlane.empty())
     {
+        if(withinPlane.size() > 1)
+        {
+            // Unoptimized but who gives a fuck, it's the builder and it doesn't need to be so
+            std::vector<MapBuildData::Wall> walls;
+            for(const Wall &wall : withinPlane)
+                walls.push_back(wall);
+
+            if (walls[0].m_VertexFrom.m_X == -200 && walls[0].m_VertexTo.m_X)
+                std::cout << "now" << std::endl;
+
+            WallBreakerOperator wallBreakerOper(walls, iSectorInclusions);
+
+            std::vector<MapBuildData::Wall> brokenWalls;
+            MapBuildData::ErrorCode ret = wallBreakerOper.Run(brokenWalls);
+            if(ret != MapBuildData::ErrorCode::OK)
+                return ret;
+
+            withinPlane.clear();
+            for(Wall &wall : brokenWalls)
+                withinPlane.insert(wall);
+        }
+
         ioKDTreeNode->m_SplitPlane = iSplitPlane;
         ioKDTreeNode->m_SplitOffset = splitOffset;
         for(const Wall &wall : withinPlane)
@@ -604,14 +812,18 @@ MapBuildData::ErrorCode MapBuildData::RecursiveBuildKDTree(std::set<MapBuildData
     {
         ioKDTreeNode->m_PositiveSide = new KDTreeNode;
         KDTreeNode::SplitPlane newSplitPlane = iSplitPlane == KDTreeNode::SplitPlane::XConst ? KDTreeNode::SplitPlane::YConst : KDTreeNode::SplitPlane::XConst;
-        RecursiveBuildKDTree(positiveSide, newSplitPlane, ioKDTreeNode->m_PositiveSide);
+        MapBuildData::ErrorCode ret = RecursiveBuildKDTree(positiveSide, newSplitPlane, iSectorInclusions, ioKDTreeNode->m_PositiveSide);
+        if (ret != MapBuildData::ErrorCode::OK)
+            return ret;
     }
 
     if (!negativeSide.empty())
     {
         ioKDTreeNode->m_NegativeSide = new KDTreeNode;
         KDTreeNode::SplitPlane newSplitPlane = iSplitPlane == KDTreeNode::SplitPlane::XConst ? KDTreeNode::SplitPlane::YConst : KDTreeNode::SplitPlane::XConst;
-        RecursiveBuildKDTree(negativeSide, newSplitPlane, ioKDTreeNode->m_NegativeSide);
+        MapBuildData::ErrorCode ret = RecursiveBuildKDTree(negativeSide, newSplitPlane, iSectorInclusions, ioKDTreeNode->m_NegativeSide);
+        if (ret != MapBuildData::ErrorCode::OK)
+            return ret;
     }
 
     return ErrorCode::OK;
@@ -631,10 +843,7 @@ void MapBuildData::SplitWallSet(std::set<MapBuildData::Wall> &ioWalls, KDTreeNod
     if (WallsParallelToSplitPlane.empty())
         return;
 
-    auto SortWalls = [&](const Wall &iWall1, const Wall &iWall2) {
-        return iWall1.m_VertexFrom.GetCoord(splitPlaneInt) < iWall2.m_VertexFrom.GetCoord(splitPlaneInt);
-    };
-    std::sort(WallsParallelToSplitPlane.begin(), WallsParallelToSplitPlane.end(), SortWalls);
+    std::sort(WallsParallelToSplitPlane.begin(), WallsParallelToSplitPlane.end());
     oSplitOffset = WallsParallelToSplitPlane[(WallsParallelToSplitPlane.size() - 1) / 2].m_VertexFrom.GetCoord(splitPlaneInt);
     WallsParallelToSplitPlane.clear();
 

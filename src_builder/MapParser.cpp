@@ -1,5 +1,7 @@
 #include "MapParser.h"
+
 #include "Map.h"
+#include "Consts.h"
 
 #include <boost/bind.hpp>
 #include <boost/config/warning_disable.hpp>
@@ -64,7 +66,7 @@ namespace
 
         void SetPlayerStartDirection(int iDirection)
         {
-            m_Data.m_PlayerStartDirection = iDirection;
+            m_Data.m_PlayerStartDirection = iDirection << ANGLE_SHIFT;
         }
         
     public:

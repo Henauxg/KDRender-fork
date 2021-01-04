@@ -46,6 +46,6 @@ sector
     elevation
     {
         ceiling {100}
-        floor {90}
+        floor {80}
     }
 }

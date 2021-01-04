@@ -11,6 +11,22 @@ public:
     {
         int m_X;
         int m_Y;
+
+        Vertex LShift(unsigned int iShift)
+        {
+            Vertex ret;
+            ret.m_X = m_X << iShift;
+            ret.m_Y = m_Y << iShift;
+            return ret;
+        }
+
+        Vertex RShift(unsigned int iShift)
+        {
+            Vertex ret;
+            ret.m_X = ARITHMETIC_SHIFT(m_X, iShift);
+            ret.m_Y = ARITHMETIC_SHIFT(m_Y, iShift);
+            return ret;
+        }
     };
 
     struct Wall

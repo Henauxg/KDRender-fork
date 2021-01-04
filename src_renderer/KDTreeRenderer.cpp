@@ -47,8 +47,8 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_pBottomOcclusionBuffer(new int[WINDOW_WIDTH]),
     m_PlayerHorizontalFOV(80 * (1 << ANGLE_SHIFT)),
     m_PlayerVerticalFOV((m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH),
-    m_PlayerHeight(30),
-    m_MaxColorInterpolationDist(500)
+    m_PlayerHeight(300),
+    m_MaxColorInterpolationDist(5000)
 {
     ClearBuffers();
 }
@@ -141,12 +141,12 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
                 if (!vertexFromInsideFrustum || !vertexToInsideFrustum)
                 {
                     Vertex intersectionVertex;
-                    if (HalfLineSegmentIntersection(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
+                    if (HalfLineSegmentIntersection<Vertex>(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
                     {
                         minVertex = intersectionVertex;
                         minAngle = -m_PlayerHorizontalFOV / 2;
                     }
-                    if (HalfLineSegmentIntersection(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
+                    if (HalfLineSegmentIntersection<Vertex>(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
                     {
                         maxVertex = intersectionVertex;
                         maxAngle = m_PlayerHorizontalFOV / 2;
@@ -433,7 +433,7 @@ bool KDTreeRenderer::isInsideFrustum(const Vertex &iVertex) const
 void KDTreeRenderer::SetPlayerCoordinates(const KDTreeRenderer::Vertex &iPosition, int iDirection)
 {
     m_PlayerPosition = iPosition;
-    m_PlayerDirection = iDirection * (1 << ANGLE_SHIFT);
+    m_PlayerDirection = iDirection;
 
     GetVector(m_PlayerPosition, m_PlayerDirection - m_PlayerHorizontalFOV / 2, m_FrustumToLeft);
     GetVector(m_PlayerPosition, m_PlayerDirection + m_PlayerHorizontalFOV / 2, m_FrustumToRight);
@@ -447,7 +447,7 @@ KDTreeRenderer::Vertex KDTreeRenderer::GetPlayerPosition() const
 
 int KDTreeRenderer::GetPlayerDirection() const
 {
-    return ARITHMETIC_SHIFT(m_PlayerDirection, ANGLE_SHIFT);
+    return m_PlayerDirection;
 }
 
 KDTreeRenderer::Vertex KDTreeRenderer::GetLook() const
