@@ -61,36 +61,62 @@ int main(int argc, char **argv)
 
     renderer.SetPlayerCoordinates(playerPos.RShift(posPlayerShift), playerDir);
 
-    int dr = 3600 << posPlayerShift;
-    int dtheta = 180 << ANGLE_SHIFT;
+    int dr = 1800 << posPlayerShift;
+    int dtheta = 140 << ANGLE_SHIFT;
 
     sf::RenderWindow app(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT),
                          "KDTree Map Renderer",
                          sf::Style::Close);
+
     Screen screen(renderer);
     sf::Clock clock;
+
+    int directionFront = 0;
+    int directionBack = 0;
+    int directionLeft = 0;
+    int directionRight = 0;
 
     while (app.isOpen())
     {
         sf::Event event;
-        sf::Time elapsedTime = clock.getElapsedTime();
 
         screen.refresh();
         app.draw(screen);
         app.display();
 
-        float deltaT = (float)(clock.getElapsedTime().asMilliseconds());
-        int dPos = 0;
-        int dDir = 0;
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::O))
+        {
+            directionFront = 1;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::L))
+        {
+            directionBack = -1;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::K))
+        {
+            directionRight = -1;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::M))
+        {
+            directionLeft = 1;
+        }
 
-        // 60 FPS cap
-        if(deltaT < (1000.f/60.f))
-            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(1000.f / 60.f - deltaT)));
-
-        deltaT = (float)(clock.getElapsedTime().asMilliseconds());
-        // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
-
-        clock.restart();
+        if (!sf::Keyboard::isKeyPressed(sf::Keyboard::O))
+        {
+            directionFront = 0;
+        }
+        if (!sf::Keyboard::isKeyPressed(sf::Keyboard::L))
+        {
+            directionBack = 0;
+        }
+        if (!sf::Keyboard::isKeyPressed(sf::Keyboard::K))
+        {
+            directionRight = 0;
+        }
+        if (!sf::Keyboard::isKeyPressed(sf::Keyboard::M))
+        {
+            directionLeft = 0;
+        }
 
         while (app.pollEvent(event))
         {
@@ -100,31 +126,7 @@ int main(int argc, char **argv)
                 app.close();
                 break;
             case sf::Event::KeyPressed:
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q))
-                {
-                    dPos -= dr;
-                }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
-                {
-                    dPos += dr;
-                }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::O))
-                {
-                    dPos += dr;
-                }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::L))
-                {
-                    dPos -= dr;
-                }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::K))
-                {
-                    dDir -= dtheta;
-                }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::M))
-                {
-                    dDir += dtheta;
-                }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+                if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
                 {
                     std::cout << "Dumping player info:" << std::endl;
                     std::cout << "x = " << (playerPos.m_X >> posPlayerShift) << std::endl;
@@ -137,8 +139,20 @@ int main(int argc, char **argv)
             }
         }
 
-        dPos = (dPos * static_cast<int>(deltaT)) / 1000;
-        dDir = (dDir * static_cast<int>(deltaT)) / 1000;
+        float deltaT = (float)(clock.getElapsedTime().asMilliseconds());
+        clock.restart();
+
+        // 60 FPS cap
+        if (deltaT < (1000.f / 60.f))
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(1000.f / 60.f - deltaT)));
+            deltaT += (float)(clock.getElapsedTime().asMilliseconds());
+        }
+
+        // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+
+        int dPos = ((directionFront + directionBack) * dr * static_cast<int>(deltaT)) / 1000;
+        int dDir = ((directionLeft + directionRight) * dtheta * static_cast<int>(deltaT)) / 1000;
 
         // if(dPos > 0)
         //     std::cout << "dPos = " << dPos << std::endl;

@@ -303,7 +303,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                             ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
                             if (minY <= maxY)
                             {
-                                RenderColumn(t, minVertexColor, maxVertexColor, std::max(0, maxY - 1), maxY, x, r, g, b);
+                                // RenderColumn(t, minVertexColor, maxVertexColor, std::max(0, maxY - 1), maxY, x, r, g, b);
                                 m_pBottomOcclusionBuffer[x] = maxY;
                             }
                         }
@@ -355,7 +355,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                             ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY);
                             if (minY <= maxY)
                             {
-                                RenderColumn(t, minVertexColor, maxVertexColor, minY, std::min(WINDOW_HEIGHT - 1, minY + 1), x, r, g, b);
+                                // RenderColumn(t, minVertexColor, maxVertexColor, minY, std::min(WINDOW_HEIGHT - 1, minY + 1), x, r, g, b);
                                 m_pTopOcclusionBuffer[x] = WINDOW_HEIGHT - 1 - minY;
                             }
                         }
