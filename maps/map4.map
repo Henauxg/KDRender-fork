@@ -17,7 +17,7 @@ sector
 
     elevation
     {
-        ceiling {2000}
+        ceiling {1400}
         floor {150}
     }
 }
@@ -73,7 +73,7 @@ sector
 
     elevation
     {
-        ceiling {1500}
+        ceiling {1300}
         floor {-200}
     }
 }
@@ -241,7 +241,21 @@ sector
 
     elevation
     {
-        ceiling {200}
+        ceiling {250}
         floor {150}
+    }
+}
+
+sector
+{
+    outline
+    {
+        vertices {{-1000, -2000} {-700, -2000} {-700, -2300} {-1000, -2300}}
+    }
+
+    elevation
+    {
+        ceiling {1400}
+        floor {1300}
     }
 }

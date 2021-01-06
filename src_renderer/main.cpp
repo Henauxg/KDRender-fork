@@ -73,8 +73,13 @@ int main(int argc, char **argv)
 
     int directionFront = 0;
     int directionBack = 0;
+    int directionStrafeLeft = 0;
+    int directionStrafeRight = 0;
     int directionLeft = 0;
     int directionRight = 0;
+    unsigned int slowDown = 0;
+
+    unsigned int poolEvent = 0;
 
     while (app.isOpen())
     {
@@ -100,6 +105,18 @@ int main(int argc, char **argv)
         {
             directionLeft = 1;
         }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Q))
+        {
+            directionStrafeRight = -1;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+        {
+            directionStrafeLeft = 1;
+        }
+        if (sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
+        {
+            slowDown = 1;
+        }
 
         if (!sf::Keyboard::isKeyPressed(sf::Keyboard::O))
         {
@@ -117,25 +134,41 @@ int main(int argc, char **argv)
         {
             directionLeft = 0;
         }
-
-        while (app.pollEvent(event))
+        if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Q))
         {
-            switch (event.type)
+            directionStrafeRight = 0;
+        }
+        if (!sf::Keyboard::isKeyPressed(sf::Keyboard::D))
+        {
+            directionStrafeLeft = 0;
+        }
+        if (!sf::Keyboard::isKeyPressed(sf::Keyboard::LShift))
+        {
+            slowDown = 0;
+        }
+
+        if(poolEvent++ % 20 == 0)
+        {
+            poolEvent = 0;
+            while (app.pollEvent(event))
             {
-            case sf::Event::Closed:
-                app.close();
-                break;
-            case sf::Event::KeyPressed:
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+                switch (event.type)
                 {
-                    std::cout << "Dumping player info:" << std::endl;
-                    std::cout << "x = " << (playerPos.m_X >> posPlayerShift) << std::endl;
-                    std::cout << "y = " << (playerPos.m_Y >> posPlayerShift) << std::endl;
-                    std::cout << "dir = " << playerDir << std::endl;
+                case sf::Event::Closed:
+                    app.close();
+                    break;
+                case sf::Event::KeyPressed:
+                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
+                    {
+                        std::cout << "Dumping player info:" << std::endl;
+                        std::cout << "x = " << (playerPos.m_X >> posPlayerShift) << std::endl;
+                        std::cout << "y = " << (playerPos.m_Y >> posPlayerShift) << std::endl;
+                        std::cout << "dir = " << playerDir << std::endl;
+                    }
+                    break;
+                default:
+                    break;
                 }
-                break;
-            default:
-                break;
             }
         }
 
@@ -143,27 +176,33 @@ int main(int argc, char **argv)
         clock.restart();
 
         // 60 FPS cap
-        if (deltaT < (1000.f / 60.f))
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(1000.f / 60.f - deltaT)));
-            deltaT += (float)(clock.getElapsedTime().asMilliseconds());
-        }
+        // if (deltaT < (1000.f / 60.f))
+        // {
+        //     std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(1000.f / 60.f - deltaT)));
+        //     deltaT += (float)(clock.getElapsedTime().asMilliseconds());
+        // }
 
-        // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+        std::cout << "FPS = " << 1000.f / deltaT << std::endl;
 
         int dPos = ((directionFront + directionBack) * dr * static_cast<int>(deltaT)) / 1000;
+        int dPosOrtho = ((directionStrafeLeft + directionStrafeRight) * dr * static_cast<int>(deltaT)) / 1000;
         int dDir = ((directionLeft + directionRight) * dtheta * static_cast<int>(deltaT)) / 1000;
 
         // if(dPos > 0)
         //     std::cout << "dPos = " << dPos << std::endl;
 
         KDTreeRenderer::Vertex look(renderer.GetLook());
-        int dx = ARITHMETIC_SHIFT(((dPos * (look.m_X - (playerPos.m_X >> posPlayerShift)))), DECIMAL_SHIFT);
-        int dy = ARITHMETIC_SHIFT((dPos * (look.m_Y - (playerPos.m_Y >> posPlayerShift))), DECIMAL_SHIFT);
+        
+        int dx = ARITHMETIC_SHIFT(((dPos * (look.m_X - (playerPos.m_X >> posPlayerShift)))), DECIMAL_SHIFT + slowDown);
+        // dx += ARITHMETIC_SHIFT(((dPosOrtho * (-look.m_Y - (playerPos.m_Y >> posPlayerShift)))), DECIMAL_SHIFT);
+
+        int dy = ARITHMETIC_SHIFT((dPos * (look.m_Y - (playerPos.m_Y >> posPlayerShift))), DECIMAL_SHIFT + slowDown);
+        // dy += ARITHMETIC_SHIFT((dPosOrtho * (look.m_X - (playerPos.m_X >> posPlayerShift))), DECIMAL_SHIFT);
+
         playerPos.m_X += dx;
         playerPos.m_Y += dy;
 
-        playerDir += dDir;
+        playerDir += dDir >> slowDown;
         while (playerDir < 0)
             playerDir += 360 << ANGLE_SHIFT;
         while (playerDir > (360 << ANGLE_SHIFT))

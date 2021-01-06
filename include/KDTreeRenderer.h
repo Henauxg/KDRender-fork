@@ -3,7 +3,11 @@
 
 #include "KDTreeMap.h"
 #include "Consts.h"
+
+#include <vector>
+#include <array>
 #include <cstring>
+#include <algorithm>
 
 class KDTreeRenderer
 {
@@ -38,21 +42,23 @@ public:
         const KDMapData::Wall *m_pKDWall;
     };
 
-    // Totally doom-inspired (Doom call these 'Visplanes')
+    // Totally doom-inspired (Doom calls these 'Visplanes')
     // See Fabien Sanglard's really good book about the Doom Engine :)
-    struct Surface
+    struct FloorSurface
     {
-        Surface()
+        FloorSurface()
         {
-            memset(m_MinY, WINDOW_HEIGHT, sizeof(int) * WINDOW_WIDTH);
-            memset(m_MaxY, 0, sizeof(int) * WINDOW_WIDTH);
+            std::fill(m_MinY.begin(), m_MinY.end(), WINDOW_HEIGHT);
+            std::fill(m_MaxY.begin(), m_MaxY.end(), 0);
+            // memset(m_MinY.data(), WINDOW_HEIGHT, sizeof(int) * WINDOW_WIDTH);
+            // memset(m_MaxY.data(), 0, sizeof(int) * WINDOW_WIDTH);
         }
 
         int m_MinX;
         int m_MaxX;
 
-        int m_MinY[WINDOW_WIDTH];
-        int m_MaxY[WINDOW_WIDTH];
+        std::array<int, WINDOW_WIDTH> m_MinY;
+        std::array<int, WINDOW_WIDTH> m_MaxY;
 
         int m_Height;
         int m_SectorIdx;
@@ -89,10 +95,12 @@ protected:
     inline void ComputeRenderParameters(int iX, int iMinX, int iMaxX,
                                         int iMinVertexBottomPixel, int iMaxVertexBottomPixel,
                                         int iMinVertexTopPixel, int iMaxVertexTopPixel,
-                                        int &oT, int &oMinY, int &oMaxY) const;
+                                        int &oT, int &oMinY, int &oMaxY,
+                                        int &oMinYUnclamped, int &oMaxYUnclamped) const;
     inline void RenderColumn(int iT, int iMinVertexColor, int iMaxVertexColor,
                              int iMinY, int iMaxY, int iX,
                              int iR, int iG, int iB);
+    void RenderFloorSurfaces();
 
 protected:
     bool isInsideFrustum(const Vertex &iVertex) const;
@@ -104,6 +112,7 @@ protected:
     unsigned char *m_pHorizOcclusionBuffer;
     int *m_pTopOcclusionBuffer;
     int *m_pBottomOcclusionBuffer;
+    std::vector<FloorSurface> m_FloorSurfaces;
 
     Vertex m_PlayerPosition;
     int m_PlayerZ;
@@ -129,13 +138,14 @@ void KDTreeRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigne
 void KDTreeRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX,
                                              int iMinVertexBottomPixel, int iMaxVertexBottomPixel,
                                              int iMinVertexTopPixel, int iMaxVertexTopPixel,
-                                             int &oT, int &oMinY, int &oMaxY) const
+                                             int &oT, int &oMinY, int &oMaxY,
+                                             int &oMinYUnclamped, int &oMaxYUnclamped) const
 {
     oT = ((iX - iMinX) * (1 << DECIMAL_SHIFT)) / (iMaxX - iMinX);
-    oMinY = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - oT) * iMinVertexBottomPixel + oT * iMaxVertexBottomPixel), DECIMAL_SHIFT);
-    oMaxY = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - oT) * iMinVertexTopPixel + oT * iMaxVertexTopPixel), DECIMAL_SHIFT);
-    oMinY = std::max<int>(oMinY, m_pBottomOcclusionBuffer[iX]);
-    oMaxY = std::min<int>(oMaxY, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[iX]);
+    oMinYUnclamped = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - oT) * iMinVertexBottomPixel + oT * iMaxVertexBottomPixel), DECIMAL_SHIFT);
+    oMaxYUnclamped = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - oT) * iMinVertexTopPixel + oT * iMaxVertexTopPixel), DECIMAL_SHIFT);
+    oMinY = std::max<int>(oMinYUnclamped, m_pBottomOcclusionBuffer[iX]);
+    oMaxY = std::min<int>(oMaxYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[iX]);
 }
 
 void KDTreeRenderer::RenderColumn(int iT, int iMinVertexColor, int iMaxVertexColor,
