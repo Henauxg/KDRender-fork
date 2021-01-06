@@ -100,6 +100,7 @@ protected:
     inline void RenderColumn(int iT, int iMinVertexColor, int iMaxVertexColor,
                              int iMinY, int iMaxY, int iX,
                              int iR, int iG, int iB);
+    void SortFloorSurfaces();
     void RenderFloorSurfaces();
 
 protected:

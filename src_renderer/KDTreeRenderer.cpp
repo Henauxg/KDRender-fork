@@ -315,6 +315,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                             floorSurface.m_MaxY[x] = std::min(minYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
                             floorSurface.m_MinY[x] = m_pBottomOcclusionBuffer[x];
 
+                            // We need to fill the occlusion buffer even if we don't draw there, since it will be
+                            // used for floor and ceiling surfaces
                             m_pBottomOcclusionBuffer[x] = std::max(m_pBottomOcclusionBuffer[x], maxY);
                             if (minY <= maxY)
                                 RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
@@ -379,6 +381,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                             ceilingSurface.m_MinY[x] = std::max(maxYUnclamped, m_pBottomOcclusionBuffer[x]);
                             ceilingSurface.m_MaxY[x] = WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x];
 
+                            // We need to fill the occlusion buffer even if we don't draw there, since it will be
+                            // used for floor and ceiling surfaces
                             m_pTopOcclusionBuffer[x] = std::max(WINDOW_HEIGHT - 1 - minYUnclamped, m_pTopOcclusionBuffer[x]);
                             if (minY <= maxY)
                                 RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
@@ -425,6 +429,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
 
 void KDTreeRenderer::RenderFloorSurfaces()
 {
+
+    
     int vFovRad = ARITHMETIC_SHIFT(m_PlayerVerticalFOV, ANGLE_SHIFT) * (314 << DECIMAL_SHIFT) / (180 * 100);
 
     for (unsigned int i = 0; i < m_FloorSurfaces.size(); i++)
