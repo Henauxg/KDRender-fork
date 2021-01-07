@@ -48,7 +48,7 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_PlayerHorizontalFOV(80 * (1 << ANGLE_SHIFT)),
     m_PlayerVerticalFOV((m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH),
     m_PlayerHeight(300),
-    m_MaxColorInterpolationDist(10000)
+    m_MaxColorInterpolationDist(5000)
 {
     m_FloorSurfaces.reserve(256);
     ClearBuffers();
@@ -203,6 +203,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
 
     int minX = ((iMinAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV;
     int maxX = ((iMaxAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV;
+
     minX = Clamp(minX, 0, WINDOW_WIDTH - 1);
     maxX = Clamp(maxX, 0, WINDOW_WIDTH - 1);
 
@@ -215,10 +216,11 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         return;
     minDist = minDist <= 0 ? 1 : minDist;
 
-    char r = iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
-    char g = iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
-    char b = iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
+    char r = 1; // iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
+    char g = 1; // iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
+    char b = 1; // iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
     int maxColorRange = iWall.m_VertexFrom.m_X == iWall.m_VertexTo.m_X ? 230 : 180;
+    int minColorClamp = iWall.m_VertexFrom.m_X == iWall.m_VertexTo.m_X ? 55 : 50;
 
     int whichSide = WhichSide(iWall.m_VertexFrom, iWall.m_VertexTo, m_PlayerPosition);
 
@@ -230,8 +232,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
 
     int minVertexColor = ((m_MaxColorInterpolationDist - minDist) * maxColorRange) / m_MaxColorInterpolationDist;
     int maxVertexColor = ((m_MaxColorInterpolationDist - maxDist) * maxColorRange) / m_MaxColorInterpolationDist;
-    minVertexColor = Clamp(minVertexColor, 0, maxColorRange);
-    maxVertexColor = Clamp(maxVertexColor, 0, maxColorRange);
+    minVertexColor = Clamp(minVertexColor, minColorClamp, maxColorRange);
+    maxVertexColor = Clamp(maxVertexColor, minColorClamp, maxColorRange);
 
     int t, minY, maxY, minYUnclamped, maxYUnclamped;
 
@@ -256,6 +258,9 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         FloorSurface ceilingSurface(floorSurface);
         ceilingSurface.m_Height = m_Map.m_Sectors[inSectorIdx].ceiling;
 
+        bool addFloorSurface = false;
+        bool addCeilingSurface = false;
+
         for (unsigned int x = minX; x < maxX; x++)
         {
             // TODO: optimize divisions
@@ -265,9 +270,13 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
 
                 floorSurface.m_MaxY[x] = std::min(minYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
                 floorSurface.m_MinY[x] = m_pBottomOcclusionBuffer[x];
+                if (!addFloorSurface && floorSurface.m_MinY[x] < floorSurface.m_MaxY[x])
+                    addFloorSurface = true;
 
                 ceilingSurface.m_MinY[x] = std::max(maxYUnclamped, m_pBottomOcclusionBuffer[x]);
                 ceilingSurface.m_MaxY[x] = WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x];
+                if (!addCeilingSurface && ceilingSurface.m_MinY[x] < ceilingSurface.m_MaxY[x])
+                    addCeilingSurface = true;
 
                 if(minY <= maxY)
                     RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
@@ -276,8 +285,10 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         // Nothing will be drawn behind this wall
         memset(m_pHorizOcclusionBuffer + minX, 1u, maxX - minX);
 
-        m_FloorSurfaces.push_back(floorSurface);
-        m_FloorSurfaces.push_back(ceilingSurface);
+        if(addFloorSurface)
+            m_FloorSurfaces.push_back(floorSurface);
+        if(addCeilingSurface)
+            m_FloorSurfaces.push_back(ceilingSurface);
     }
     // Soft wall, what I believe the Doom engine calls "portals"
     else if (outSectorIdx != -1)
@@ -302,48 +313,36 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                 floorSurface.m_SectorIdx = whichSide > 0 ? inSectorIdx : outSectorIdx;
                 floorSurface.m_Height = m_Map.m_Sectors[floorSurface.m_SectorIdx].floor;
 
-                if ((whichSide > 0 && inSector.floor < outSector.floor) ||
-                    (whichSide < 0 && outSector.floor < inSector.floor))
-                {
-                    for (unsigned int x = minX; x < maxX; x++)
-                    {
-                        // TODO: optimize divisions
-                        if (!m_pHorizOcclusionBuffer[x])
-                        {
-                            ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
+                bool wallIsVisible = (whichSide > 0 && inSector.floor < outSector.floor) ||
+                                     (whichSide < 0 && outSector.floor < inSector.floor);
+                bool addFloorSurface = false;
 
+                for (unsigned int x = minX; x < maxX; x++)
+                {
+                    // TODO: optimize divisions
+                    if (!m_pHorizOcclusionBuffer[x])
+                    {
+                        ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
+
+                        if(wallIsVisible)
                             floorSurface.m_MaxY[x] = std::min(minYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
-                            floorSurface.m_MinY[x] = m_pBottomOcclusionBuffer[x];
-
-                            // We need to fill the occlusion buffer even if we don't draw there, since it will be
-                            // used for floor and ceiling surfaces
-                            m_pBottomOcclusionBuffer[x] = std::max(m_pBottomOcclusionBuffer[x], maxY);
-                            if (minY <= maxY)
-                                RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
-                        }
-                    }
-
-                    m_FloorSurfaces.push_back(floorSurface);
-                }
-                else
-                {
-                    for (unsigned int x = minX; x < maxX; x++)
-                    {
-                        // TODO: optimize divisions
-                        // TODO: compute maxY only
-                        if (!m_pHorizOcclusionBuffer[x])
-                        {
-                            ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
-                            
+                        else
                             floorSurface.m_MaxY[x] = std::min(maxYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
-                            floorSurface.m_MinY[x] = m_pBottomOcclusionBuffer[x];
-                            
-                            m_pBottomOcclusionBuffer[x] = std::max(m_pBottomOcclusionBuffer[x], maxY);
-                        }
-                    }
+                        floorSurface.m_MinY[x] = m_pBottomOcclusionBuffer[x];
 
-                    m_FloorSurfaces.push_back(floorSurface);
+                        if(!addFloorSurface && floorSurface.m_MinY[x] < floorSurface.m_MaxY[x])
+                            addFloorSurface = true;
+
+                        // We need to fill the occlusion buffer even if we don't draw there, since it will be
+                        // used for floor and ceiling surfaces
+                        m_pBottomOcclusionBuffer[x] = std::max(m_pBottomOcclusionBuffer[x], maxY);
+                        if (minY <= maxY && wallIsVisible)
+                            RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
+                    }
                 }
+
+                if(addFloorSurface)
+                    m_FloorSurfaces.push_back(floorSurface);
             }
         };
 
@@ -367,49 +366,37 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                 ceilingSurface.m_SectorIdx = whichSide > 0 ? inSectorIdx : outSectorIdx;
                 ceilingSurface.m_Height = m_Map.m_Sectors[ceilingSurface.m_SectorIdx].ceiling;
 
-                if ((whichSide > 0 && inSector.ceiling > outSector.ceiling) ||
-                    (whichSide < 0 && outSector.ceiling > inSector.ceiling))
+                bool wallIsVisible = (whichSide > 0 && inSector.ceiling > outSector.ceiling) ||
+                                     (whichSide < 0 && outSector.ceiling > inSector.ceiling);
+
+                bool addFloorSurface = false;
+
+                for (unsigned int x = minX; x < maxX; x++)
                 {
-
-                    for (unsigned int x = minX; x < maxX; x++)
+                    // TODO: optimize divisions
+                    if (!m_pHorizOcclusionBuffer[x])
                     {
-                        // TODO: optimize divisions
-                        if (!m_pHorizOcclusionBuffer[x])
-                        {
-                            ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
+                        ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
 
+                        if(wallIsVisible)
                             ceilingSurface.m_MinY[x] = std::max(maxYUnclamped, m_pBottomOcclusionBuffer[x]);
-                            ceilingSurface.m_MaxY[x] = WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x];
-
-                            // We need to fill the occlusion buffer even if we don't draw there, since it will be
-                            // used for floor and ceiling surfaces
-                            m_pTopOcclusionBuffer[x] = std::max(WINDOW_HEIGHT - 1 - minYUnclamped, m_pTopOcclusionBuffer[x]);
-                            if (minY <= maxY)
-                                RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
-                        }
-                    }
-
-                    m_FloorSurfaces.push_back(ceilingSurface);
-                }
-                else
-                {
-                    for (unsigned int x = minX; x < maxX; x++)
-                    {
-                        // TODO: optimize divisions
-                        // TODO: compute minY only
-                        if (!m_pHorizOcclusionBuffer[x])
-                        {
-                            ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
-
+                        else
                             ceilingSurface.m_MinY[x] = std::max(minYUnclamped, m_pBottomOcclusionBuffer[x]);
-                            ceilingSurface.m_MaxY[x] = WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x];
+                        ceilingSurface.m_MaxY[x] = WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x];
 
-                            m_pTopOcclusionBuffer[x] = std::max(WINDOW_HEIGHT - 1 - minYUnclamped, m_pTopOcclusionBuffer[x]);
-                        }
+                        if (!addFloorSurface && ceilingSurface.m_MinY[x] < ceilingSurface.m_MaxY[x])
+                            addFloorSurface = true;
+
+                        // We need to fill the occlusion buffer even if we don't draw there, since it will be
+                        // used for floor and ceiling surfaces
+                        m_pTopOcclusionBuffer[x] = std::max(WINDOW_HEIGHT - 1 - minYUnclamped, m_pTopOcclusionBuffer[x]);
+                        if (minY <= maxY && wallIsVisible)
+                            RenderColumn(t, minVertexColor, maxVertexColor, minY, maxY, x, r, g, b);
                     }
-
-                    m_FloorSurfaces.push_back(ceilingSurface);
                 }
+
+                if(addFloorSurface)
+                    m_FloorSurfaces.push_back(ceilingSurface);
             }
         };
 
@@ -429,15 +416,13 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
 
 void KDTreeRenderer::RenderFloorSurfaces()
 {
-
-    
     int vFovRad = ARITHMETIC_SHIFT(m_PlayerVerticalFOV, ANGLE_SHIFT) * (314 << DECIMAL_SHIFT) / (180 * 100);
 
     for (unsigned int i = 0; i < m_FloorSurfaces.size(); i++)
     {
-        char r = m_FloorSurfaces[i].m_SectorIdx % 3 == 0 ? 1 : 0;
-        char g = m_FloorSurfaces[i].m_SectorIdx % 3 == 1 ? 1 : 0;
-        char b = m_FloorSurfaces[i].m_SectorIdx % 3 == 2 ? 1 : 0;
+        char r = 1; // m_FloorSurfaces[i].m_SectorIdx % 3 == 0 ? 1 : 0;
+        char g = 1; // m_FloorSurfaces[i].m_SectorIdx % 3 == 1 ? 1 : 0;
+        char b = 1; // m_FloorSurfaces[i].m_SectorIdx % 3 == 2 ? 1 : 0;
         int maxColorRange = 150;
 
         int minY = WINDOW_HEIGHT;
@@ -463,6 +448,7 @@ void KDTreeRenderer::RenderFloorSurfaces()
                 int dist = std::abs(((m_PlayerZ - m_FloorSurfaces[i].m_Height) << DECIMAL_SHIFT) / sinTheta); // no need to right shift, sinTheta is already shifted
                 dist = std::min(dist, m_MaxColorInterpolationDist);
                 int color = ((m_MaxColorInterpolationDist - dist) * maxColorRange) / m_MaxColorInterpolationDist;
+                color = std::max(45, color);
 
                 for (int x = m_FloorSurfaces[i].m_MinX; x <= m_FloorSurfaces[i].m_MaxX; x++)
                 {
