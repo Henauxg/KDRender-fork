@@ -15,24 +15,8 @@ class KDTreeRenderer
 public:
     struct Vertex
     {
-        int m_X;
-        int m_Y;
-
-        Vertex LShift(unsigned int iShift)
-        {
-            Vertex ret;
-            ret.m_X = m_X << iShift;
-            ret.m_Y = m_Y << iShift;
-            return ret;
-        }
-
-        Vertex RShift(unsigned int iShift)
-        {
-            Vertex ret;
-            ret.m_X = ARITHMETIC_SHIFT(m_X, iShift);
-            ret.m_Y = ARITHMETIC_SHIFT(m_Y, iShift);
-            return ret;
-        }
+        CType m_X;
+        CType m_Y;
     };
 
     struct Wall
@@ -41,6 +25,14 @@ public:
         Vertex m_VertexTo;
 
         const KDMapData::Wall *m_pKDWall;
+    };
+
+    struct Sector
+    {
+        CType m_Floor;
+        CType m_Ceiling;
+
+        const KDMapData::Sector *m_pKDSector;
     };
 
     // Totally doom-inspired (Doom calls these 'Visplanes')
@@ -94,7 +86,7 @@ public:
         int m_MinY[WINDOW_WIDTH];
         int m_MaxY[WINDOW_WIDTH];
 
-        int m_Height;
+        CType m_Height;
         int m_SectorIdx;
     };
 
@@ -120,8 +112,8 @@ protected:
     inline void WriteFrameBuffer(unsigned int idx, unsigned char r, unsigned char g, unsigned char b);
 
 protected:
-    int ComputeZ();
-    int RecursiveComputeZ(KDTreeNode *pNode);
+    CType ComputeZ();
+    CType RecursiveComputeZ(KDTreeNode *pNode);
 
     void Render();
     void RenderNode(KDTreeNode *pNode);
@@ -129,9 +121,9 @@ protected:
     inline void ComputeRenderParameters(int iX, int iMinX, int iMaxX,
                                         int iMinVertexBottomPixel, int iMaxVertexBottomPixel,
                                         int iMinVertexTopPixel, int iMaxVertexTopPixel,
-                                        int &oT, int &oMinY, int &oMaxY,
+                                        CType &oT, int &oMinY, int &oMaxY,
                                         int &oMinYUnclamped, int &oMaxYUnclamped) const;
-    inline void RenderColumn(int iT, int iMinVertexColor, int iMaxVertexColor,
+    inline void RenderColumn(CType iT, int iMinVertexColor, int iMaxVertexColor,
                              int iMinY, int iMaxY, int iX,
                              int iR, int iG, int iB);
     bool AddFlatSurface(const FlatSurface &iFlatSurface);
@@ -145,18 +137,18 @@ protected:
     const KDTreeMap &m_Map;
 
     unsigned char *m_pFrameBuffer;
-    unsigned char *m_pHorizOcclusionBuffer;
-    int *m_pTopOcclusionBuffer;
-    int *m_pBottomOcclusionBuffer;
+    unsigned char m_pHorizOcclusionBuffer[WINDOW_WIDTH];
+    int m_pTopOcclusionBuffer[WINDOW_WIDTH];
+    int m_pBottomOcclusionBuffer[WINDOW_WIDTH];
     
     // Data used to render floors and ceilings
     std::unordered_map<int, std::vector<FlatSurface>> m_FlatSurfaces; // Flat surfaces are stored int the map according to their height
     int m_LinesXStart[WINDOW_HEIGHT];
-    int m_HeightYCache[WINDOW_HEIGHT];
-    int m_DistYCache[WINDOW_HEIGHT];
+    CType m_HeightYCache[WINDOW_HEIGHT];
+    CType m_DistYCache[WINDOW_HEIGHT];
 
     Vertex m_PlayerPosition;
-    int m_PlayerZ;
+    CType m_PlayerZ;
     int m_PlayerDirection;
     Vertex m_FrustumToLeft;
     Vertex m_FrustumToRight;
@@ -164,8 +156,8 @@ protected:
 
     const int m_PlayerHorizontalFOV;
     const int m_PlayerVerticalFOV;
-    const int m_PlayerHeight;
-    const int m_MaxColorInterpolationDist;
+    const CType m_PlayerHeight;
+    const CType m_MaxColorInterpolationDist;
 };
 
 #include <iostream>
@@ -180,22 +172,22 @@ void KDTreeRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigne
 void KDTreeRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX,
                                              int iMinVertexBottomPixel, int iMaxVertexBottomPixel,
                                              int iMinVertexTopPixel, int iMaxVertexTopPixel,
-                                             int &oT, int &oMinY, int &oMaxY,
+                                             CType &oT, int &oMinY, int &oMaxY,
                                              int &oMinYUnclamped, int &oMaxYUnclamped) const
 {
-    oT = iMaxX == iMinX ? 0 : ((iX - iMinX) * (1 << DECIMAL_SHIFT)) / (iMaxX - iMinX);
-    oMinYUnclamped = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - oT) * iMinVertexBottomPixel + oT * iMaxVertexBottomPixel), DECIMAL_SHIFT);
-    oMaxYUnclamped = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - oT) * iMinVertexTopPixel + oT * iMaxVertexTopPixel), DECIMAL_SHIFT);
+    oT = iMaxX == iMinX ? CType(0) : static_cast<CType>(iX - iMinX) / static_cast<CType>(iMaxX - iMinX);
+    oMinYUnclamped = ((1 - oT) * iMinVertexBottomPixel + oT * iMaxVertexBottomPixel);
+    oMaxYUnclamped = ((1 - oT) * iMinVertexTopPixel + oT * iMaxVertexTopPixel);
     oMinY = std::max<int>(oMinYUnclamped, m_pBottomOcclusionBuffer[iX]);
     oMaxY = std::min<int>(oMaxYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[iX]);
 }
 
-void KDTreeRenderer::RenderColumn(int iT, int iMinVertexColor, int iMaxVertexColor,
+void KDTreeRenderer::RenderColumn(CType iT, int iMinVertexColor, int iMaxVertexColor,
                                   int iMinY, int iMaxY, int iX,
                                   int iR, int iG, int iB)
 {
-    int color = ARITHMETIC_SHIFT((iMinVertexColor * ((1 << DECIMAL_SHIFT) - iT)) + iT * iMaxVertexColor, DECIMAL_SHIFT);
-    // int color = ARITHMETIC_SHIFT(iT * 255, DECIMAL_SHIFT);
+    int color = (iMinVertexColor * (1 - iT)) + iT * iMaxVertexColor;
+    // int color = 255 * iT;
     for (unsigned int y = iMinY; y <= iMaxY; y++)
     {
         WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + iX, color * iR, color * iG, color * iB);

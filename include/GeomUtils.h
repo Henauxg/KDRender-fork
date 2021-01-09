@@ -6,14 +6,15 @@
 #include <cstdint>
 
 #include "Consts.h"
+#include "FP32.h"
 
 template<typename Vertex>
 int WhichSide(const Vertex &iV1, const Vertex &iV2, const Vertex &iP)
 {
-    int normalX = iV2.m_Y - iV1.m_Y;
-    int normalY = iV1.m_X - iV2.m_X;
+    CType normalX = iV2.m_Y - iV1.m_Y;
+    CType normalY = iV1.m_X - iV2.m_X;
 
-    int prod = (iP.m_X - iV1.m_X) * normalX + (iP.m_Y - iV1.m_Y) * normalY;
+    CType prod = (iP.m_X - iV1.m_X) * normalX + (iP.m_Y - iV1.m_Y) * normalY;
     if(prod == 0)
         return 0;
     else if(prod < 0)
@@ -22,102 +23,101 @@ int WhichSide(const Vertex &iV1, const Vertex &iV2, const Vertex &iP)
         return 1;
 }
 
-int cosInt(int iAngle)
+CType cosInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
-    double iAngleRad = static_cast<double>(iAngle) / (180.0 * static_cast<double>((1 << ANGLE_SHIFT))) * M_PI;
-    double mult = static_cast<double>((1 << DECIMAL_SHIFT));
-    double res = cos(iAngleRad) * mult;
-    return static_cast<int>(res);
+    float iAngleRad = static_cast<float>(iAngle) / (180.0 * static_cast<float>((1 << ANGLE_SHIFT))) * M_PI;
+    float res = cos(iAngleRad);
+    return static_cast<CType>(res);
 }
 
-int sinInt(int iAngle)
+CType sinInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
-    double iAngleRad = static_cast<double>(iAngle) / (180.0 * static_cast<double>((1 << ANGLE_SHIFT))) * M_PI;
-    double mult = static_cast<double>((1 << DECIMAL_SHIFT));
-    double res = sin(iAngleRad) * mult;
-    return static_cast<int>(res);
+    float iAngleRad = static_cast<float>(iAngle) / (180.0 * static_cast<float>((1 << ANGLE_SHIFT))) * M_PI;
+    float res = sin(iAngleRad);
+    return static_cast<CType>(res);
 }
 
-int atanInt(int iX)
+int atanInt(CType iX)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
-    double x = static_cast<double>(iX) / (1 << DECIMAL_SHIFT);
-    double atanVal = atan(x) * (180.0 * static_cast<double>((1 << ANGLE_SHIFT))) / M_PI;
+    float x = static_cast<float>(iX);
+    float atanVal = atan(x) * (180.0 * static_cast<float>((1 << ANGLE_SHIFT))) / M_PI;
     return static_cast<int>(atanVal);
 }
 
 template<typename Vertex>
 void GetVector(const Vertex &iOrigin, int iDirection, Vertex &oTo)
 {
-    int cosDirMult = cosInt(iDirection);
-    int sinDirMult = sinInt(iDirection);
+    CType cosDirMult = cosInt(iDirection);
+    CType sinDirMult = sinInt(iDirection);
 
     oTo.m_X = iOrigin.m_X + sinDirMult;
     oTo.m_Y = iOrigin.m_Y + cosDirMult;
 }
 
-template<typename Vertex>
-int DotProduct(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3)
+template <typename Vertex>
+CType DotProduct(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3)
 {
     return (v1.m_X - v0.m_X) * (v3.m_X - v2.m_X) + (v1.m_Y - v0.m_Y) * (v3.m_Y - v2.m_Y);
 }
 
-template<typename Vertex>
-int Det(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3)
+template <typename Vertex>
+CType Det(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3)
 {
     return (v1.m_X - v0.m_X) * (v3.m_Y - v2.m_Y) - (v1.m_Y - v0.m_Y) * (v3.m_X - v2.m_X);
 }
 
+// TODO: re-enable
 // From Wikipedia's article on integer square root
-unsigned int SqrtInt(unsigned int s)
-{
-    unsigned int x0 = s >> 1; // Initial estimate
+// FP32<FP_SHIFT> SqrtInt(const FP32<FP_SHIFT> &s)
+// {
+//     FP32<FP_SHIFT> x0 = s >> 1; // Initial estimate
 
-    // Sanity check
-    if (x0)
-    {
-        unsigned long x1 = (x0 + s / x0) >> 1; // Update
+//     // Sanity check
+//     if (x0)
+//     {
+//         long x1 = (x0 + s / x0) >> 1; // Update
 
-        while (x1 < x0) // This also checks for cycle
-        {
-            x0 = x1;
-            x1 = (x0 + s / x0) >> 1;
-        }
+//         while (x1 < x0) // This also checks for cycle
+//         {
+//             x0 = x1;
+//             x1 = (x0 + s / x0) >> 1;
+//         }
 
-        return x0;
-    }
-    else
-    {
-        return s;
-    }
-}
+//         return x0;
+//     }
+//     else
+//     {
+//         return s;
+//     }
+// }
 
 template <typename Vertex>
-unsigned int SquareDist(const Vertex &iV1, const Vertex &iV2)
+CType SquareDist(const Vertex &iV1, const Vertex &iV2)
 {
     return (iV2.m_X - iV1.m_X) * (iV2.m_X - iV1.m_X) + (iV2.m_Y - iV1.m_Y) * (iV2.m_Y - iV1.m_Y);
 }
 
 template <typename Vertex>
-unsigned int DistInt(const Vertex &iV1, const Vertex &iV2)
+CType DistInt(const Vertex &iV1, const Vertex &iV2)
 {
-    return SqrtInt(SquareDist(iV1, iV2));
+    return std::sqrt(static_cast<float>(SquareDist(iV1, iV2)));
 }
 
 template <typename Vertex>
 int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
 {
-    int dot = DotProduct(iFrom, iTo1, iFrom, iTo2);
-    int det = Det(iFrom, iTo1, iFrom, iTo2);
+    CType dot = DotProduct(iFrom, iTo1, iFrom, iTo2);
+    CType det = Det(iFrom, iTo1, iFrom, iTo2);
     // Extremely non-optimized
     // TODO: implement lookup table
-    double angle = -atan2(det, dot);
-    return static_cast<int>(angle / M_PI * (180.0 * static_cast<double>((1 << ANGLE_SHIFT))));
+    float angle = -atan2(det, dot);
+    return static_cast<int>(angle / M_PI * (180.0 * static_cast<float>((1 << ANGLE_SHIFT))));
 }
 
 // Thanks to http://flassari.is/2008/11/line-line-intersection-in-cplusplus/ for writing
@@ -125,7 +125,7 @@ int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
 // Note: this function returns false if lines are colinear, even if they are the same
 // TODO: raised default precision to 64-bit integers, which kind of sucks. Won't need to
 // to this anymore when we finally implement a clean fixed-point arithmetic API
-template <typename Vertex, typename Intermediate = int64_t>
+template <typename Vertex, typename Intermediate = CType>
 bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
 {
     // Store the values for fast access and easy
@@ -151,7 +151,7 @@ bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV
 
 // Really dirty, just wanted to try this out
 // TODO: code a real intersection solver
-template <typename Vertex, typename Intermediate = int64_t>
+template <typename Vertex, typename Intermediate = CType>
 bool HalfLineSegmentIntersection(const Vertex &iHalfLineFrom, const Vertex &iHalfLineTo, const Vertex &iV1, const Vertex &iV2, Vertex &oIntersection)
 {
     if (!LineLineIntersection<Vertex, Intermediate>(iHalfLineFrom, iHalfLineTo, iV1, iV2, oIntersection))
@@ -173,7 +173,7 @@ bool HalfLineSegmentIntersection(const Vertex &iHalfLineFrom, const Vertex &iHal
 
 // As shitty as above
 // TODO: code a real intersection solver
-template <typename Vertex, typename Intermediate = int64_t>
+template <typename Vertex, typename Intermediate = CType>
 bool SegmentSegmentIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
 {
     if (!LineLineIntersection<Vertex, Intermediate>(iV1, iV2, iV3, iV4, oIntersection))

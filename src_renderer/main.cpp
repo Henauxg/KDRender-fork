@@ -3,6 +3,7 @@
 #include "Consts.h"
 #include "KDTreeMap.h"
 #include "KDTreeRenderer.h"
+#include "FP32.h"
 
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Drawable.hpp>
@@ -54,14 +55,12 @@ int main(int argc, char **argv)
     KDTreeRenderer::Vertex playerPos;
     playerPos.m_X = map.GetPlayerStartX();
     playerPos.m_Y = map.GetPlayerStartY();
-    unsigned posPlayerShift = 3u;
-    playerPos.LShift(posPlayerShift);
 
     int playerDir = map.GetPlayerStartDirection();
 
-    renderer.SetPlayerCoordinates(playerPos.RShift(posPlayerShift), playerDir);
+    renderer.SetPlayerCoordinates(playerPos, playerDir);
 
-    int dr = 1800 << posPlayerShift;
+    CType dr(180.f / POSITION_SCALE);
     int dtheta = 140 << ANGLE_SHIFT;
 
     sf::RenderWindow app(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT),
@@ -77,7 +76,7 @@ int main(int argc, char **argv)
     int directionStrafeRight = 0;
     int directionLeft = 0;
     int directionRight = 0;
-    unsigned int slowDown = 0;
+    int slowDown = 0;
 
     unsigned int poolEvent = 0;
 
@@ -161,8 +160,8 @@ int main(int argc, char **argv)
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
                     {
                         std::cout << "Dumping player info:" << std::endl;
-                        std::cout << "x = " << (playerPos.m_X >> posPlayerShift) << std::endl;
-                        std::cout << "y = " << (playerPos.m_Y >> posPlayerShift) << std::endl;
+                        std::cout << "x = " << playerPos.m_X << std::endl;
+                        std::cout << "y = " << playerPos.m_Y << std::endl;
                         std::cout << "dir = " << playerDir << std::endl;
                     }
                     break;
@@ -184,31 +183,31 @@ int main(int argc, char **argv)
 
         // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
 
-        int dPos = ((directionFront + directionBack) * dr * static_cast<int>(deltaT)) / 1000;
-        int dPosOrtho = ((directionStrafeLeft + directionStrafeRight) * dr * static_cast<int>(deltaT)) / 1000;
-        int dDir = ((directionLeft + directionRight) * dtheta * static_cast<int>(deltaT)) / 1000;
+        CType dPos = ((directionFront + directionBack) * dr * static_cast<CType>(deltaT)) / 1000;
+        CType dPosOrtho = ((directionStrafeLeft + directionStrafeRight) * dr * static_cast<CType>(deltaT)) / 1000;
+        CType dDir = ((directionLeft + directionRight) * dtheta * (deltaT)) / 1000;
+
+        dPos = dPos / (slowDown + 1);
+        dDir = dDir / (slowDown + 1);
 
         // if(dPos > 0)
         //     std::cout << "dPos = " << dPos << std::endl;
 
         KDTreeRenderer::Vertex look(renderer.GetLook());
         
-        int dx = ARITHMETIC_SHIFT(((dPos * (look.m_X - (playerPos.m_X >> posPlayerShift)))), DECIMAL_SHIFT + slowDown);
-        // dx += ARITHMETIC_SHIFT(((dPosOrtho * (-look.m_Y - (playerPos.m_Y >> posPlayerShift)))), DECIMAL_SHIFT);
-
-        int dy = ARITHMETIC_SHIFT((dPos * (look.m_Y - (playerPos.m_Y >> posPlayerShift))), DECIMAL_SHIFT + slowDown);
-        // dy += ARITHMETIC_SHIFT((dPosOrtho * (look.m_X - (playerPos.m_X >> posPlayerShift))), DECIMAL_SHIFT);
+        CType dx = dPos * (look.m_X - playerPos.m_X);
+        CType dy = dPos * (look.m_Y - playerPos.m_Y);
 
         playerPos.m_X += dx;
         playerPos.m_Y += dy;
 
-        playerDir += dDir >> slowDown;
+        playerDir = playerDir + dDir;
         while (playerDir < 0)
             playerDir += 360 << ANGLE_SHIFT;
         while (playerDir > (360 << ANGLE_SHIFT))
             playerDir -= 360 << ANGLE_SHIFT;
 
-        renderer.SetPlayerCoordinates(playerPos.RShift(posPlayerShift), playerDir);
+        renderer.SetPlayerCoordinates(playerPos, playerDir);
 
         renderer.ClearBuffers();
         renderer.RefreshFrameBuffer();

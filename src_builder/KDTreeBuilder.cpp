@@ -762,7 +762,6 @@ MapBuildData::ErrorCode MapBuildData::BuildKDTree(KDTreeMap *&oKDTree)
     return ret;
 }
 
-#include <iostream>
 MapBuildData::ErrorCode MapBuildData::RecursiveBuildKDTree(std::set<MapBuildData::Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, const SectorInclusions &iSectorInclusions, KDTreeNode *&ioKDTreeNode)
 {
     if(!ioKDTreeNode)
@@ -791,9 +790,6 @@ MapBuildData::ErrorCode MapBuildData::RecursiveBuildKDTree(std::set<MapBuildData
             std::vector<MapBuildData::Wall> walls;
             for(const Wall &wall : withinPlane)
                 walls.push_back(wall);
-
-            if (walls[0].m_VertexFrom.m_X == -200 && walls[0].m_VertexTo.m_X)
-                std::cout << "now" << std::endl;
 
             WallBreakerOperator wallBreakerOper(walls, iSectorInclusions);
 

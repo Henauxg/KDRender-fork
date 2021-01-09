@@ -14,43 +14,34 @@ namespace
 
         if(ipNode)
         {
-            const KDMapData::Wall &kdWall = ipNode->GetWall(iWallIdx);
-            wall.m_pKDWall = &kdWall;
-
-            if(ipNode->GetSplitPlane() == KDTreeNode::SplitPlane::XConst)
-            {
-                wall.m_VertexFrom.m_X = ipNode->GetSplitOffset();
-                wall.m_VertexTo.m_X = wall.m_VertexFrom.m_X;
-
-                wall.m_VertexFrom.m_Y = kdWall.m_From;
-                wall.m_VertexTo.m_Y = kdWall.m_To;
-            }
-            else
-            {
-                wall.m_VertexFrom.m_Y = ipNode->GetSplitOffset();
-                wall.m_VertexTo.m_Y = wall.m_VertexFrom.m_Y;
-
-                wall.m_VertexFrom.m_X = kdWall.m_From;
-                wall.m_VertexTo.m_X = kdWall.m_To;
-            }
+            wall = ipNode->BuildXYScaledWall<KDTreeRenderer::Wall>(iWallIdx);
+            wall.m_pKDWall = ipNode->GetWall(iWallIdx);
         }
 
         return wall;
+    }
+
+    KDTreeRenderer::Sector GetSectorFromKDSector(const KDMapData::Sector &iSector)
+    {
+        KDTreeRenderer::Sector sector;
+
+        sector.m_pKDSector = &iSector;
+        sector.m_Ceiling = CType(iSector.ceiling) / POSITION_SCALE;
+        sector.m_Floor = CType(iSector.floor) / POSITION_SCALE;
+
+        return sector;
     }
 }
 
 KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_Map(iMap),
     m_pFrameBuffer(new unsigned char[WINDOW_HEIGHT * WINDOW_WIDTH * 4u]),
-    m_pHorizOcclusionBuffer(new unsigned char[WINDOW_WIDTH]),
-    m_pTopOcclusionBuffer(new int[WINDOW_WIDTH]),
-    m_pBottomOcclusionBuffer(new int[WINDOW_WIDTH]),
     m_PlayerHorizontalFOV(80 * (1 << ANGLE_SHIFT)),
     m_PlayerVerticalFOV((m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH),
-    m_PlayerHeight(300),
-    m_MaxColorInterpolationDist(5000)
+    m_PlayerHeight(CType(30) / POSITION_SCALE),
+    m_MaxColorInterpolationDist(CType(500) / POSITION_SCALE)
 {
-    m_FlatSurfaces.reserve(256);
+    m_FlatSurfaces.reserve(20);
     memset(m_pFrameBuffer, 255u, sizeof(unsigned char) * 4u * WINDOW_HEIGHT * WINDOW_WIDTH);
     ClearBuffers();
 }
@@ -109,9 +100,9 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
 
     bool positiveSide;
     if (pNode->m_SplitPlane == KDTreeNode::SplitPlane::XConst)
-        positiveSide = m_PlayerPosition.m_X > pNode->m_SplitOffset;
+        positiveSide = m_PlayerPosition.m_X > (CType(pNode->m_SplitOffset) / POSITION_SCALE);
     else
-        positiveSide = m_PlayerPosition.m_Y > pNode->m_SplitOffset;
+        positiveSide = m_PlayerPosition.m_Y > (CType(pNode->m_SplitOffset) / POSITION_SCALE);
 
     if (positiveSide && pNode->m_PositiveSide)
         RenderNode(pNode->m_PositiveSide);
@@ -207,14 +198,14 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     minX = Clamp(minX, 0, WINDOW_WIDTH - 1);
     maxX = Clamp(maxX, 0, WINDOW_WIDTH - 1);
 
-    int minDist = ARITHMETIC_SHIFT(DistInt(m_PlayerPosition, iMinVertex) * cosInt(iMinAngle), DECIMAL_SHIFT); // Correction for distortion
-    int maxDist = ARITHMETIC_SHIFT(DistInt(m_PlayerPosition, iMaxVertex) * cosInt(iMaxAngle), DECIMAL_SHIFT);   // Correction for distortion
+    CType minDist = DistInt(m_PlayerPosition, iMinVertex) * cosInt(iMinAngle); // Correction for distortion
+    CType maxDist = DistInt(m_PlayerPosition, iMaxVertex) * cosInt(iMaxAngle); // Correction for distortion
 
     // TODO: perform actual clipping
     // Dirty hack
     if(maxDist <= 0)
         return;
-    minDist = minDist <= 0 ? 1 : minDist;
+    minDist = minDist <= CType(0) ? CType(1) : minDist;
 
     char r = iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
     char g = iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
@@ -225,38 +216,39 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     int whichSide = WhichSide(iWall.m_VertexFrom, iWall.m_VertexTo, m_PlayerPosition);
 
     int inSectorIdx = iWall.m_pKDWall->m_InSector;
-    const KDMapData::Sector &inSector = m_Map.m_Sectors[inSectorIdx];
+    const Sector &inSector = GetSectorFromKDSector(m_Map.m_Sectors[inSectorIdx]);
 
     int outSectorIdx = iWall.m_pKDWall->m_OutSector;
-    const KDMapData::Sector &outSector = m_Map.m_Sectors[outSectorIdx];
+    const Sector &outSector = GetSectorFromKDSector(m_Map.m_Sectors[outSectorIdx]);
 
     int minVertexColor = ((m_MaxColorInterpolationDist - minDist) * maxColorRange) / m_MaxColorInterpolationDist;
     int maxVertexColor = ((m_MaxColorInterpolationDist - maxDist) * maxColorRange) / m_MaxColorInterpolationDist;
     minVertexColor = Clamp(minVertexColor, minColorClamp, maxColorRange);
     maxVertexColor = Clamp(maxVertexColor, minColorClamp, maxColorRange);
 
-    int t, minY, maxY, minYUnclamped, maxYUnclamped;
+    CType t;
+    int minY, maxY, minYUnclamped, maxYUnclamped;
 
     // Hard wall: no outer sector, which means nothing will be drawn behind this wall
     if (outSectorIdx == -1 && whichSide > 0)
     {
-        int eyeToTop = inSector.ceiling - m_PlayerZ;
-        int eyeToBottom = m_PlayerZ - inSector.floor;
+        CType eyeToTop = inSector.m_Ceiling - m_PlayerZ;
+        CType eyeToBottom = m_PlayerZ - inSector.m_Floor;
 
-        int minVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottom / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-        int minVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTop / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        int minVertexBottomPixel = ((-atanInt(eyeToBottom / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        int minVertexTopPixel = ((atanInt(eyeToTop / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
-        int maxVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottom / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-        int maxVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTop / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        int maxVertexBottomPixel = ((-atanInt(eyeToBottom / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        int maxVertexTopPixel = ((atanInt(eyeToTop / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
         FlatSurface floorSurface;
         floorSurface.m_MinX = minX;
         floorSurface.m_MaxX = maxX;
         floorSurface.m_SectorIdx = inSectorIdx;
-        floorSurface.m_Height = m_Map.m_Sectors[inSectorIdx].floor;
+        floorSurface.m_Height = inSector.m_Floor;
 
         FlatSurface ceilingSurface(floorSurface);
-        ceilingSurface.m_Height = m_Map.m_Sectors[inSectorIdx].ceiling;
+        ceilingSurface.m_Height = inSector.m_Ceiling;
 
         bool addFloorSurface = false;
         bool addCeilingSurface = false;
@@ -298,23 +290,23 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
             // TODO: /!\ CAREFUL when adding flat surfaces, need to add them even if inSector.floor == outSector.floor
             // if (inSector.floor != outSector.floor)
             {
-                int eyeToTopFloor = m_PlayerZ - std::max(inSector.floor, outSector.floor);
-                int eyeToBottomFloor = m_PlayerZ - std::min(inSector.floor, outSector.floor);
+                CType eyeToTopFloor = m_PlayerZ - std::max(inSector.m_Floor, outSector.m_Floor);
+                CType eyeToBottomFloor = m_PlayerZ - std::min(inSector.m_Floor, outSector.m_Floor);
 
-                int minVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottomFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-                int minVertexTopPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToTopFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int minVertexBottomPixel = ((-atanInt(eyeToBottomFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int minVertexTopPixel = ((-atanInt(eyeToTopFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
-                int maxVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottomFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-                int maxVertexTopPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToTopFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int maxVertexBottomPixel = ((-atanInt(eyeToBottomFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int maxVertexTopPixel = ((-atanInt(eyeToTopFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
                 FlatSurface floorSurface;
                 floorSurface.m_MinX = minX;
                 floorSurface.m_MaxX = maxX;
                 floorSurface.m_SectorIdx = whichSide > 0 ? inSectorIdx : outSectorIdx;
-                floorSurface.m_Height = m_Map.m_Sectors[floorSurface.m_SectorIdx].floor;
+                floorSurface.m_Height = whichSide > 0 ? inSector.m_Floor : outSector.m_Floor;
 
-                bool wallIsVisible = (whichSide > 0 && inSector.floor < outSector.floor) ||
-                                     (whichSide < 0 && outSector.floor < inSector.floor);
+                bool wallIsVisible = (whichSide > 0 && inSector.m_Floor < outSector.m_Floor) ||
+                                     (whichSide < 0 && outSector.m_Floor < inSector.m_Floor);
                 bool addFloorSurface = false;
 
                 for (unsigned int x = minX; x <= maxX; x++)
@@ -351,23 +343,23 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
             // TODO: /!\ CAREFUL when adding flat surfaces, need to add them even if inSector.ceiling == outSector.ceiling
             // if (inSector.ceiling != outSector.ceiling)
             {
-                int eyeToTopCeiling = std::max(inSector.ceiling, outSector.ceiling) - m_PlayerZ;
-                int eyeToBottomCeiling = std::min(inSector.ceiling, outSector.ceiling) - m_PlayerZ;
+                CType eyeToTopCeiling = std::max(inSector.m_Ceiling, outSector.m_Ceiling) - m_PlayerZ;
+                CType eyeToBottomCeiling = std::min(inSector.m_Ceiling, outSector.m_Ceiling) - m_PlayerZ;
 
-                int minVertexBottomPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToBottomCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-                int minVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTopCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int minVertexBottomPixel = ((atanInt(eyeToBottomCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int minVertexTopPixel = ((atanInt(eyeToTopCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
-                int maxVertexBottomPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToBottomCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-                int maxVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTopCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int maxVertexBottomPixel = ((atanInt(eyeToBottomCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                int maxVertexTopPixel = ((atanInt(eyeToTopCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
                 FlatSurface ceilingSurface;
                 ceilingSurface.m_MinX = minX;
                 ceilingSurface.m_MaxX = maxX;
                 ceilingSurface.m_SectorIdx = whichSide > 0 ? inSectorIdx : outSectorIdx;
-                ceilingSurface.m_Height = m_Map.m_Sectors[ceilingSurface.m_SectorIdx].ceiling;
+                ceilingSurface.m_Height = whichSide > 0 ? inSector.m_Ceiling : outSector.m_Ceiling;
 
-                bool wallIsVisible = (whichSide > 0 && inSector.ceiling > outSector.ceiling) ||
-                                     (whichSide < 0 && outSector.ceiling > inSector.ceiling);
+                bool wallIsVisible = (whichSide > 0 && inSector.m_Ceiling > outSector.m_Ceiling) ||
+                                     (whichSide < 0 && outSector.m_Ceiling > inSector.m_Ceiling);
 
                 bool addCeilingSurface = false;
 
@@ -400,8 +392,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
             }
         };
 
-        if ((whichSide > 0 && outSector.ceiling > inSector.ceiling) ||
-            (whichSide < 0 && outSector.ceiling < inSector.ceiling))
+        if ((whichSide > 0 && outSector.m_Ceiling > inSector.m_Ceiling) ||
+            (whichSide < 0 && outSector.m_Ceiling < inSector.m_Ceiling))
         {
             RenderTop();
             RenderBottom();
@@ -434,7 +426,7 @@ bool KDTreeRenderer::AddFlatSurface(const FlatSurface &iFlatSurface)
 
 void KDTreeRenderer::RenderFlatSurfacesLegacy()
 {
-    int vFovRad = ARITHMETIC_SHIFT(m_PlayerVerticalFOV, ANGLE_SHIFT) * (314 << DECIMAL_SHIFT) / (180 * 100);
+    int vFovRad = ARITHMETIC_SHIFT(m_PlayerVerticalFOV, ANGLE_SHIFT) * (314 << FP_SHIFT) / (180 * 100);
 
     for(const auto &keyVal : m_FlatSurfaces)
     {
@@ -464,12 +456,13 @@ void KDTreeRenderer::RenderFlatSurfacesLegacy()
                 // double distD = std::abs(static_cast<double>(m_PlayerZ - m_FlatSurfaces[i].m_Height) / sin(thetaD));
                 // int colorD = ((m_MaxColorInterpolationDist - distD) * maxColorRange) / m_MaxColorInterpolationDist;
 
-                int theta = (m_PlayerVerticalFOV * (2.0 * y - WINDOW_HEIGHT)) / (2.0 * WINDOW_HEIGHT);
-                int sinTheta = sinInt(theta);
+                int theta = (m_PlayerVerticalFOV * (2 * y - WINDOW_HEIGHT)) / (2 * WINDOW_HEIGHT);
+                CType sinTheta = sinInt(theta);
 
                 if (sinTheta != 0)
                 {
-                    int dist = std::abs(((m_PlayerZ - currentSurface.m_Height) << DECIMAL_SHIFT) / sinTheta); // no need to right shift, sinTheta is already shifted
+                    CType dist = (((m_PlayerZ - CType(currentSurface.m_Height))) / sinTheta);
+                    dist = dist < 0 ? -dist : dist;
                     dist = std::min(dist, m_MaxColorInterpolationDist);
                     int color = ((m_MaxColorInterpolationDist - dist) * maxColorRange) / m_MaxColorInterpolationDist;
                     color = std::max(45, color);
@@ -517,7 +510,7 @@ void KDTreeRenderer::RenderFlatSurfaces()
             int maxColorRange = 150;
 
             auto DrawLine = [&](int iY, int iMinX, int iMaxX) {
-                int dist = -1;
+                CType dist = -1;
                 int color;
 
                 if (m_HeightYCache[iY] == currentSurface.m_Height && m_DistYCache[iY] >= 0)
@@ -526,12 +519,13 @@ void KDTreeRenderer::RenderFlatSurfaces()
                 }
                 else
                 {
-                    int theta = (m_PlayerVerticalFOV * (2.0 * iY - WINDOW_HEIGHT)) / (2.0 * WINDOW_HEIGHT);
-                    int sinTheta = sinInt(theta);
+                    int theta = (m_PlayerVerticalFOV * (2 * iY - WINDOW_HEIGHT)) / (2 * WINDOW_HEIGHT);
+                    CType sinTheta = sinInt(theta);
 
                     if (sinTheta != 0)
                     {
-                        dist = std::abs(((m_PlayerZ - currentSurface.m_Height) << DECIMAL_SHIFT) / sinTheta); // no need to right shift, sinTheta is already shifted
+                        dist = (m_PlayerZ - currentSurface.m_Height) / sinTheta;
+                        dist = dist < 0 ? -dist : dist;
                         dist = std::min(dist, m_MaxColorInterpolationDist);
                         m_HeightYCache[iY] = currentSurface.m_Height;
                         m_DistYCache[iY] = dist;
@@ -623,23 +617,23 @@ void KDTreeRenderer::RenderFlatSurfaces()
     }
 }
 
-int KDTreeRenderer::ComputeZ()
+CType KDTreeRenderer::ComputeZ()
 {
     return RecursiveComputeZ(m_Map.m_RootNode);
 }
 
-int KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
+CType KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
 {
     if(!pNode)
         return 0; // Should not happen
 
-    int oZ = 0;
+    CType oZ = 0;
 
     bool positiveSide;
     if(pNode->m_SplitPlane == KDTreeNode::SplitPlane::XConst)
-        positiveSide = m_PlayerPosition.m_X > pNode->m_SplitOffset;
+        positiveSide = m_PlayerPosition.m_X > (CType(pNode->m_SplitOffset) / POSITION_SCALE);
     else
-        positiveSide = m_PlayerPosition.m_Y > pNode->m_SplitOffset;
+        positiveSide = m_PlayerPosition.m_Y > (CType(pNode->m_SplitOffset) / POSITION_SCALE);
 
     // We are on a terminal node
     // The node contains exactly one wall (or multiple walls oriented similarly and refering
@@ -653,17 +647,23 @@ int KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
             int whichSide = WhichSide(wall.m_VertexFrom, wall.m_VertexTo, m_PlayerPosition);
             if(whichSide < 0)
             {
-                int outSector = wall.m_pKDWall->m_OutSector;
-                if (outSector >= 0)
-                    oZ = m_Map.m_Sectors[outSector].floor + m_PlayerHeight;
-                oZ = Clamp(oZ, m_Map.m_Sectors[outSector].floor, m_Map.m_Sectors[outSector].ceiling);
+                int outSectorIdx = wall.m_pKDWall->m_OutSector;
+                if (outSectorIdx >= 0)
+                {
+                    Sector outSector = GetSectorFromKDSector(m_Map.m_Sectors[outSectorIdx]);
+                    oZ = outSector.m_Floor + m_PlayerHeight;
+                    oZ = Clamp(oZ, outSector.m_Floor, outSector.m_Ceiling);
+                }
             }
             else
             {
-                int inSector = wall.m_pKDWall->m_InSector;
-                if (inSector >= 0)
-                    oZ = m_Map.m_Sectors[inSector].floor + m_PlayerHeight;
-                oZ = Clamp(oZ, m_Map.m_Sectors[inSector].floor, m_Map.m_Sectors[inSector].ceiling);
+                int inSectorIdx = wall.m_pKDWall->m_InSector;
+                if (inSectorIdx >= 0)
+                {
+                    Sector inSector = GetSectorFromKDSector(m_Map.m_Sectors[inSectorIdx]);
+                    oZ = inSector.m_Floor + m_PlayerHeight;
+                    oZ = Clamp(oZ, inSector.m_Floor, inSector.m_Ceiling);
+                }
             }
         }
     }

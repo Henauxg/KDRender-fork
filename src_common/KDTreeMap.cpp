@@ -233,14 +233,14 @@ unsigned int KDTreeMap::ComputeStreamSize() const
     return streamSize;
 }
 
-int KDTreeMap::GetPlayerStartX() const
+CType KDTreeMap::GetPlayerStartX() const
 {
-    return m_PlayerStartX;
+    return CType(m_PlayerStartX) / POSITION_SCALE;
 }
 
-int KDTreeMap::GetPlayerStartY() const
+CType KDTreeMap::GetPlayerStartY() const
 {
-    return m_PlayerStartY;
+    return CType(m_PlayerStartY) / POSITION_SCALE;
 }
 
 int KDTreeMap::GetPlayerStartDirection() const

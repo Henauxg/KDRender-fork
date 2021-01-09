@@ -1,20 +1,24 @@
 CXX = g++
-CXXFLAGS = -W -Wall -std=c++11 -Og -I./include -I.
+CXXFLAGS = -W -Wall -std=c++11 -O3 -I./include -I.
 LDFLAGS = 
  
-tCFILES=$(wildcard src/*.cpp) $(wildcard src/*/*.cpp)
-CFILES=$(tCFILES:src/%=%)
-OBJS=$(CFILES:%.cpp=obj/%.o)
+COMMONSRCFILES=$(wildcard src_common/*.cpp) $(wildcard src_common/*/*.cpp)
+BUILDERSRCFILES=$(wildcard src_builder/*.cpp) $(wildcard src_builder/*/*.cpp)
+RENDERERSRCFILES=$(wildcard src_renderer/*.cpp) $(wildcard src_renderer/*/*.cpp)
+ALLSRCFILES=$(COMMONSRCFILES) $(BUILDERSRCFILES) $(RENDERERSRCFILES)
 
-EXEC=mapbuilder
+CPPFILES=$(COMMONSRCFILES:src_common/%=%) $(BUILDERSRCFILES:src_builder/%=%) $(RENDERERSRCFILES:src_builder/%=%)
+OBJS=$(CPPFILES:%.cpp=obj/%.o)
+
+EXECBUILDER=mapbuilder
  
-all : bin/$(EXEC) 
+builder : bin/$(EXECBUILDER) 
  
 bin/mapbuilder : $(OBJS)
 	mkdir -p ./bin
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS) -L$(SFML_PATH)/lib
 	
-obj/%.o : src/%.cpp
+obj/%.o : src_common/%.cpp src_builder/%.cpp src_renderer/%.cpp
 	mkdir -p ./obj
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 	
@@ -22,13 +26,7 @@ clean :
 	@rm obj/*.o
 	
 cleaner : clean
-	@rm bin/$(EXEC)
+	@rm bin/$(EXECBUILDER)
 
-run: bin/$(EXEC)
+run: bin/$(EXECBUILDER)
 	export LD_LIBRARY_PATH=$(SFML_PATH)/lib ; bin/$(EXEC)
-	
-run_gdb: bin/$(EXEC)
-	export LD_LIBRARY_PATH=$(SFML_PATH)/lib ; gdb bin/$(EXEC)
-
-run_valgrind: bin/$(EXEC)
-	export LD_LIBRARY_PATH=$(SFML_PATH)/lib ; valgrind --leak-check=full bin/$(EXEC)
