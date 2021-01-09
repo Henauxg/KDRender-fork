@@ -50,7 +50,8 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_PlayerHeight(300),
     m_MaxColorInterpolationDist(5000)
 {
-    m_FloorSurfaces.reserve(256);
+    m_FlatSurfaces.reserve(256);
+    memset(m_pFrameBuffer, 255u, sizeof(unsigned char) * 4u * WINDOW_HEIGHT * WINDOW_WIDTH);
     ClearBuffers();
 }
 
@@ -77,16 +78,16 @@ void KDTreeRenderer::FillFrameBufferWithColor(unsigned char r, unsigned char g, 
 
 void KDTreeRenderer::ClearBuffers()
 {
-    memset(m_pFrameBuffer, 255u, sizeof(unsigned char) * 4u * WINDOW_HEIGHT * WINDOW_WIDTH);
     memset(m_pHorizOcclusionBuffer, 0u, sizeof(unsigned char) * WINDOW_WIDTH);
     memset(m_pTopOcclusionBuffer, 0, sizeof(int) * WINDOW_WIDTH);
     memset(m_pBottomOcclusionBuffer, 0, sizeof(int) * WINDOW_WIDTH);
-    m_FloorSurfaces.clear();
+    m_FlatSurfaces.clear();
 }
 
 void KDTreeRenderer::RefreshFrameBuffer()
 {
-    FillFrameBufferWithColor(0u, 0u, 0u);
+    // Useful when debugging, useless and costly otherwise
+    // FillFrameBufferWithColor(0u, 0u, 0u);
     Render();
 }
 
@@ -99,7 +100,7 @@ void KDTreeRenderer::Render()
     GetVector(m_PlayerPosition, m_PlayerDirection, m_Look);
 
     RenderNode(m_Map.m_RootNode);
-    RenderFloorSurfaces();
+    RenderFlatSurfaces();
 }
 
 void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
@@ -132,60 +133,56 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
         }
         else
         {
-            // Render walls within split plane
-            for (unsigned int i = 0; i < pNode->m_Walls.size(); i++)
+            int minAngle = m_PlayerHorizontalFOV / 2, maxAngle = -m_PlayerHorizontalFOV / 2;
+            Vertex minVertex, maxVertex;
+
+            bool vertexFromInsideFrustum = isInsideFrustum(wall.m_VertexFrom);
+            bool vertexToInsideFrustum = isInsideFrustum(wall.m_VertexTo);
+
+            if (!vertexFromInsideFrustum || !vertexToInsideFrustum)
             {
-                int minAngle = m_PlayerHorizontalFOV / 2, maxAngle = -m_PlayerHorizontalFOV / 2;
-                Vertex minVertex, maxVertex;
-
-                bool vertexFromInsideFrustum = isInsideFrustum(wall.m_VertexFrom);
-                bool vertexToInsideFrustum = isInsideFrustum(wall.m_VertexTo);
-
-                if (!vertexFromInsideFrustum || !vertexToInsideFrustum)
+                Vertex intersectionVertex;
+                if (HalfLineSegmentIntersection<Vertex>(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
                 {
-                    Vertex intersectionVertex;
-                    if (HalfLineSegmentIntersection<Vertex>(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
-                    {
-                        minVertex = intersectionVertex;
-                        minAngle = -m_PlayerHorizontalFOV / 2;
-                    }
-                    if (HalfLineSegmentIntersection<Vertex>(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
-                    {
-                        maxVertex = intersectionVertex;
-                        maxAngle = m_PlayerHorizontalFOV / 2;
-                    }
+                    minVertex = intersectionVertex;
+                    minAngle = -m_PlayerHorizontalFOV / 2;
                 }
-
-                auto updateMinMaxAnglesAndVertices = [&](int iAngle, const Vertex &iVertex)
+                if (HalfLineSegmentIntersection<Vertex>(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
                 {
-                    if (iAngle < minAngle)
-                    {
-                        minAngle = iAngle;
-                        minVertex = iVertex;
-                    }
-                    if (iAngle > maxAngle)
-                    {
-                        maxAngle = iAngle;
-                        maxVertex = iVertex;
-                    }
-                };
-
-                if(vertexFromInsideFrustum)
-                {
-                    int angle = Angle(m_PlayerPosition, m_Look, wall.m_VertexFrom);
-                    updateMinMaxAnglesAndVertices(angle, wall.m_VertexFrom);
+                    maxVertex = intersectionVertex;
+                    maxAngle = m_PlayerHorizontalFOV / 2;
                 }
-
-                if (vertexToInsideFrustum)
-                {
-                    int angle = Angle(m_PlayerPosition, m_Look, wall.m_VertexTo);
-                    updateMinMaxAnglesAndVertices(angle, wall.m_VertexTo);
-                }
-
-                // Should always be true
-                if(minAngle <= maxAngle)
-                    RenderWall(wall, minVertex, maxVertex, minAngle, maxAngle);
             }
+
+            auto updateMinMaxAnglesAndVertices = [&](int iAngle, const Vertex &iVertex)
+            {
+                if (iAngle < minAngle)
+                {
+                    minAngle = iAngle;
+                    minVertex = iVertex;
+                }
+                if (iAngle > maxAngle)
+                {
+                    maxAngle = iAngle;
+                    maxVertex = iVertex;
+                }
+            };
+
+            if(vertexFromInsideFrustum)
+            {
+                int angle = Angle(m_PlayerPosition, m_Look, wall.m_VertexFrom);
+                updateMinMaxAnglesAndVertices(angle, wall.m_VertexFrom);
+            }
+
+            if (vertexToInsideFrustum)
+            {
+                int angle = Angle(m_PlayerPosition, m_Look, wall.m_VertexTo);
+                updateMinMaxAnglesAndVertices(angle, wall.m_VertexTo);
+            }
+
+            // Should always be true
+            if(minAngle <= maxAngle)
+                RenderWall(wall, minVertex, maxVertex, minAngle, maxAngle);
         }
     }
 
@@ -202,7 +199,10 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     // shady things
 
     int minX = ((iMinAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV;
-    int maxX = ((iMaxAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV;
+    int maxX = ((iMaxAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV - 1;
+
+    if(minX > maxX)
+        return;
 
     minX = Clamp(minX, 0, WINDOW_WIDTH - 1);
     maxX = Clamp(maxX, 0, WINDOW_WIDTH - 1);
@@ -216,9 +216,9 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         return;
     minDist = minDist <= 0 ? 1 : minDist;
 
-    char r = 1; // iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
-    char g = 1; // iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
-    char b = 1; // iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
+    char r = iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
+    char g = iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
+    char b = iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
     int maxColorRange = iWall.m_VertexFrom.m_X == iWall.m_VertexTo.m_X ? 230 : 180;
     int minColorClamp = iWall.m_VertexFrom.m_X == iWall.m_VertexTo.m_X ? 55 : 50;
 
@@ -249,19 +249,19 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         int maxVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottom / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
         int maxVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTop / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
-        FloorSurface floorSurface;
+        FlatSurface floorSurface;
         floorSurface.m_MinX = minX;
         floorSurface.m_MaxX = maxX;
         floorSurface.m_SectorIdx = inSectorIdx;
         floorSurface.m_Height = m_Map.m_Sectors[inSectorIdx].floor;
 
-        FloorSurface ceilingSurface(floorSurface);
+        FlatSurface ceilingSurface(floorSurface);
         ceilingSurface.m_Height = m_Map.m_Sectors[inSectorIdx].ceiling;
 
         bool addFloorSurface = false;
         bool addCeilingSurface = false;
 
-        for (unsigned int x = minX; x < maxX; x++)
+        for (int x = minX; x <= maxX; x++)
         {
             // TODO: optimize divisions
             if (!m_pHorizOcclusionBuffer[x])
@@ -283,12 +283,12 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
             }
         }
         // Nothing will be drawn behind this wall
-        memset(m_pHorizOcclusionBuffer + minX, 1u, maxX - minX);
+        memset(m_pHorizOcclusionBuffer + minX, 1u, maxX - minX + 1);
 
         if(addFloorSurface)
-            m_FloorSurfaces.push_back(floorSurface);
+            AddFlatSurface(floorSurface);
         if(addCeilingSurface)
-            m_FloorSurfaces.push_back(ceilingSurface);
+            AddFlatSurface(ceilingSurface);
     }
     // Soft wall, what I believe the Doom engine calls "portals"
     else if (outSectorIdx != -1)
@@ -307,7 +307,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                 int maxVertexBottomPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToBottomFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
                 int maxVertexTopPixel = ((-atanInt((1 << DECIMAL_SHIFT) * eyeToTopFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
-                FloorSurface floorSurface;
+                FlatSurface floorSurface;
                 floorSurface.m_MinX = minX;
                 floorSurface.m_MaxX = maxX;
                 floorSurface.m_SectorIdx = whichSide > 0 ? inSectorIdx : outSectorIdx;
@@ -317,7 +317,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                                      (whichSide < 0 && outSector.floor < inSector.floor);
                 bool addFloorSurface = false;
 
-                for (unsigned int x = minX; x < maxX; x++)
+                for (unsigned int x = minX; x <= maxX; x++)
                 {
                     // TODO: optimize divisions
                     if (!m_pHorizOcclusionBuffer[x])
@@ -342,7 +342,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                 }
 
                 if(addFloorSurface)
-                    m_FloorSurfaces.push_back(floorSurface);
+                    AddFlatSurface(floorSurface);
             }
         };
 
@@ -360,7 +360,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                 int maxVertexBottomPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToBottomCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
                 int maxVertexTopPixel = ((atanInt((1 << DECIMAL_SHIFT) * eyeToTopCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
-                FloorSurface ceilingSurface;
+                FlatSurface ceilingSurface;
                 ceilingSurface.m_MinX = minX;
                 ceilingSurface.m_MaxX = maxX;
                 ceilingSurface.m_SectorIdx = whichSide > 0 ? inSectorIdx : outSectorIdx;
@@ -369,9 +369,9 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                 bool wallIsVisible = (whichSide > 0 && inSector.ceiling > outSector.ceiling) ||
                                      (whichSide < 0 && outSector.ceiling > inSector.ceiling);
 
-                bool addFloorSurface = false;
+                bool addCeilingSurface = false;
 
-                for (unsigned int x = minX; x < maxX; x++)
+                for (unsigned int x = minX; x <= maxX; x++)
                 {
                     // TODO: optimize divisions
                     if (!m_pHorizOcclusionBuffer[x])
@@ -384,8 +384,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                             ceilingSurface.m_MinY[x] = std::max(minYUnclamped, m_pBottomOcclusionBuffer[x]);
                         ceilingSurface.m_MaxY[x] = WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x];
 
-                        if (!addFloorSurface && ceilingSurface.m_MinY[x] < ceilingSurface.m_MaxY[x])
-                            addFloorSurface = true;
+                        if (!addCeilingSurface && ceilingSurface.m_MinY[x] < ceilingSurface.m_MaxY[x])
+                            addCeilingSurface = true;
 
                         // We need to fill the occlusion buffer even if we don't draw there, since it will be
                         // used for floor and ceiling surfaces
@@ -395,8 +395,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                     }
                 }
 
-                if(addFloorSurface)
-                    m_FloorSurfaces.push_back(ceilingSurface);
+                if(addCeilingSurface)
+                    AddFlatSurface(ceilingSurface);
             }
         };
 
@@ -414,66 +414,212 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     }
 }
 
-void KDTreeRenderer::RenderFloorSurfaces()
+bool KDTreeRenderer::AddFlatSurface(const FlatSurface &iFlatSurface)
+{
+    bool hasBeenAbsorbed = false;
+    for(auto &k : m_FlatSurfaces)
+    {
+        for (FlatSurface &flatSurface : k.second)
+        {
+            if (flatSurface.Absorb(iFlatSurface))
+                hasBeenAbsorbed = true;
+        }
+    }
+
+    if(!hasBeenAbsorbed)
+        m_FlatSurfaces[iFlatSurface.m_Height].push_back(iFlatSurface);
+
+    return true;
+}
+
+void KDTreeRenderer::RenderFlatSurfacesLegacy()
 {
     int vFovRad = ARITHMETIC_SHIFT(m_PlayerVerticalFOV, ANGLE_SHIFT) * (314 << DECIMAL_SHIFT) / (180 * 100);
 
-    for (unsigned int i = 0; i < m_FloorSurfaces.size(); i++)
+    for(const auto &keyVal : m_FlatSurfaces)
     {
-        char r = 1; // m_FloorSurfaces[i].m_SectorIdx % 3 == 0 ? 1 : 0;
-        char g = 1; // m_FloorSurfaces[i].m_SectorIdx % 3 == 1 ? 1 : 0;
-        char b = 1; // m_FloorSurfaces[i].m_SectorIdx % 3 == 2 ? 1 : 0;
-        int maxColorRange = 150;
+        const std::vector<FlatSurface> &currentSurfaces = keyVal.second;
 
-        int minY = WINDOW_HEIGHT;
-        int maxY = 0;
-        for (int x = m_FloorSurfaces[i].m_MinX; x <= m_FloorSurfaces[i].m_MaxX; x++)
+        for (unsigned int i = 0; i < currentSurfaces.size(); i++)
         {
-            minY = std::min(m_FloorSurfaces[i].m_MinY[x], minY);
-            maxY = std::max(m_FloorSurfaces[i].m_MaxY[x], maxY);
-        }
+            const FlatSurface &currentSurface = currentSurfaces[i];
 
-        for (int y = minY; y < maxY; y++)
-        {
-            // double vFovRadD = ARITHMETIC_SHIFT(m_PlayerVerticalFOV, ANGLE_SHIFT) * M_PI / 180.0;
-            // double thetaD = (vFovRadD * (2.0 * y - WINDOW_HEIGHT)) / (2.0 * WINDOW_HEIGHT);
-            // double distD = std::abs(static_cast<double>(m_PlayerZ - m_FloorSurfaces[i].m_Height) / sin(thetaD));
-            // int colorD = ((m_MaxColorInterpolationDist - distD) * maxColorRange) / m_MaxColorInterpolationDist;
+            char r = currentSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
+            char g = currentSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
+            char b = currentSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
+            int maxColorRange = 150;
 
-            int theta = (m_PlayerVerticalFOV * (2.0 * y - WINDOW_HEIGHT)) / (2.0 * WINDOW_HEIGHT);
-            int sinTheta = sinInt(theta);
-            
-            if(sinTheta != 0)
+            int minY = WINDOW_HEIGHT;
+            int maxY = 0;
+            for (int x = currentSurface.m_MinX; x <= currentSurface.m_MaxX; x++)
             {
-                int dist = std::abs(((m_PlayerZ - m_FloorSurfaces[i].m_Height) << DECIMAL_SHIFT) / sinTheta); // no need to right shift, sinTheta is already shifted
-                dist = std::min(dist, m_MaxColorInterpolationDist);
-                int color = ((m_MaxColorInterpolationDist - dist) * maxColorRange) / m_MaxColorInterpolationDist;
-                color = std::max(45, color);
+                minY = std::min(currentSurface.m_MinY[x], minY);
+                maxY = std::max(currentSurface.m_MaxY[x], maxY);
+            }
 
-                for (int x = m_FloorSurfaces[i].m_MinX; x <= m_FloorSurfaces[i].m_MaxX; x++)
+            for (int y = minY; y < maxY; y++)
+            {
+                // double vFovRadD = ARITHMETIC_SHIFT(m_PlayerVerticalFOV, ANGLE_SHIFT) * M_PI / 180.0;
+                // double thetaD = (vFovRadD * (2.0 * y - WINDOW_HEIGHT)) / (2.0 * WINDOW_HEIGHT);
+                // double distD = std::abs(static_cast<double>(m_PlayerZ - m_FlatSurfaces[i].m_Height) / sin(thetaD));
+                // int colorD = ((m_MaxColorInterpolationDist - distD) * maxColorRange) / m_MaxColorInterpolationDist;
+
+                int theta = (m_PlayerVerticalFOV * (2.0 * y - WINDOW_HEIGHT)) / (2.0 * WINDOW_HEIGHT);
+                int sinTheta = sinInt(theta);
+
+                if (sinTheta != 0)
                 {
-                    if (y < m_FloorSurfaces[i].m_MaxY[x] && y >= m_FloorSurfaces[i].m_MinY[x])
+                    int dist = std::abs(((m_PlayerZ - currentSurface.m_Height) << DECIMAL_SHIFT) / sinTheta); // no need to right shift, sinTheta is already shifted
+                    dist = std::min(dist, m_MaxColorInterpolationDist);
+                    int color = ((m_MaxColorInterpolationDist - dist) * maxColorRange) / m_MaxColorInterpolationDist;
+                    color = std::max(45, color);
+
+                    for (int x = currentSurface.m_MinX; x <= currentSurface.m_MaxX; x++)
                     {
-                        WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + x, color * r, color * g, color * b);
+                        if (y <= currentSurface.m_MaxY[x] && y >= currentSurface.m_MinY[x])
+                        {
+                            WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + x, color * r, color * g, color * b);
+                        }
                     }
                 }
             }
         }
+    }
+}
 
-        // for (int x = m_FloorSurfaces[i].m_MinX; x <= m_FloorSurfaces[i].m_MaxX; x++)
-        // {
-        //     // int minY = m_FloorSurfaces[i].m_MinY[x];
-        //     // int maxY = m_FloorSurfaces[i].m_MaxY[x];
-        //     for (int y = m_FloorSurfaces[i].m_MinY[x]; y <= m_FloorSurfaces[i].m_MaxY[x]; y++)
-        //     {
-        //         double vFovRad = ARITHMETIC_SHIFT(m_PlayerVerticalFOV, ANGLE_SHIFT) * M_PI / 180.0;
-        //         double theta = (vFovRad * (2.0 * y - WINDOW_HEIGHT)) / (2.0 * WINDOW_HEIGHT);
-        //         double dist = std::abs(static_cast<double>(m_PlayerZ - m_FloorSurfaces[i].m_Height) / sin(theta));
-        //         int color = ((m_MaxColorInterpolationDist - dist) * maxColorRange) / m_MaxColorInterpolationDist;
+void KDTreeRenderer::RenderFlatSurfaces()
+{
+    // {
+    //     unsigned int totalSize = 0;
+    //     for (const auto &k : m_FlatSurfaces)
+    //         totalSize += k.second.size();
+    //     std::cout << "Number of flat surfaces = " << totalSize << std::endl;
+    // }
 
-        //         WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + x, color * r, color * g, color * b);
-        //     }
-        // }
+    for(unsigned int i = 0; i < WINDOW_HEIGHT; i++)
+    {
+        m_LinesXStart[i] = -1;
+        m_HeightYCache[i] = 0;
+        m_DistYCache[i] = -1;
+    }
+
+    for(const auto &keyVal : m_FlatSurfaces)
+    {
+        const std::vector<FlatSurface> &currentSurfaces = keyVal.second;
+
+        for (unsigned int i = 0; i < currentSurfaces.size(); i++)
+        {
+            const FlatSurface &currentSurface = currentSurfaces[i];
+
+            char r = currentSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
+            char g = currentSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
+            char b = currentSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
+            int maxColorRange = 150;
+
+            auto DrawLine = [&](int iY, int iMinX, int iMaxX) {
+                int dist = -1;
+                int color;
+
+                if (m_HeightYCache[iY] == currentSurface.m_Height && m_DistYCache[iY] >= 0)
+                {
+                    dist = m_DistYCache[iY];
+                }
+                else
+                {
+                    int theta = (m_PlayerVerticalFOV * (2.0 * iY - WINDOW_HEIGHT)) / (2.0 * WINDOW_HEIGHT);
+                    int sinTheta = sinInt(theta);
+
+                    if (sinTheta != 0)
+                    {
+                        dist = std::abs(((m_PlayerZ - currentSurface.m_Height) << DECIMAL_SHIFT) / sinTheta); // no need to right shift, sinTheta is already shifted
+                        dist = std::min(dist, m_MaxColorInterpolationDist);
+                        m_HeightYCache[iY] = currentSurface.m_Height;
+                        m_DistYCache[iY] = dist;
+                    }
+                }
+
+                if(dist >= 0)
+                {
+                    color = ((m_MaxColorInterpolationDist - dist) * maxColorRange) / m_MaxColorInterpolationDist;
+                    color = std::max(45, color);
+
+                    for (int x = iMinX; x <= iMaxX; x++)
+                    {
+                        WriteFrameBuffer((WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH + x, color * r, color * g, color * b);
+                    }
+                }
+            };
+
+            // Jump to start of the drawable part of the surface
+            int minXDrawable = currentSurface.m_MinX;
+            for(; currentSurface.m_MinY[minXDrawable] > currentSurface.m_MaxY[minXDrawable]; minXDrawable++);
+            int maxXDrawable = currentSurface.m_MaxX;
+            for (; currentSurface.m_MinY[maxXDrawable] > currentSurface.m_MaxY[maxXDrawable]; maxXDrawable--);
+
+            for (int y = currentSurface.m_MinY[minXDrawable]; y <= currentSurface.m_MaxY[minXDrawable]; y++)
+            {
+                m_LinesXStart[y] = minXDrawable;
+            }
+
+            for (int x = minXDrawable + 1; x <= maxXDrawable; x++)
+            {
+                // End of contiguous block
+                if (currentSurface.m_MinY[x] > currentSurface.m_MaxY[x] ||
+                    currentSurface.m_MinY[x] > currentSurface.m_MaxY[x - 1] ||
+                    currentSurface.m_MaxY[x] < currentSurface.m_MinY[x - 1])
+                {
+                    for (int y = currentSurface.m_MinY[x - 1]; y <= currentSurface.m_MaxY[x - 1]; y++)
+                    {
+                        DrawLine(y, m_LinesXStart[y], x - 1);
+                    }
+
+                    // Jump to next drawable part of the surface
+                    for (; x + 1 <= maxXDrawable && currentSurface.m_MinY[x + 1] > currentSurface.m_MaxY[x + 1]; x++);
+
+                    for (int y = currentSurface.m_MinY[x]; y <= currentSurface.m_MaxY[x]; y++)
+                        m_LinesXStart[y] = x;
+                }
+                else
+                {
+                    int deltaBottom = currentSurface.m_MinY[x] - currentSurface.m_MinY[x - 1];
+                    if (deltaBottom < 0)
+                    {
+                        for (int y = currentSurface.m_MinY[x]; y < currentSurface.m_MinY[x - 1]; y++)
+                        {
+                            m_LinesXStart[y] = x;
+                        }
+                    }
+                    else if (deltaBottom > 0)
+                    {
+                        for (int y = currentSurface.m_MinY[x - 1]; y < currentSurface.m_MinY[x]; y++)
+                        {
+                            DrawLine(y, m_LinesXStart[y], x - 1);
+                        }
+                    }
+
+                    int deltaTop = currentSurface.m_MaxY[x] - currentSurface.m_MaxY[x - 1];
+                    if (deltaTop > 0)
+                    {
+                        for (int y = currentSurface.m_MaxY[x - 1] + 1; y <= currentSurface.m_MaxY[x]; y++)
+                        {
+                            m_LinesXStart[y] = x;
+                        }
+                    }
+                    else if (deltaTop < 0)
+                    {
+                        for (int y = currentSurface.m_MaxY[x]; y < currentSurface.m_MaxY[x - 1]; y++)
+                        {
+                            DrawLine(y, m_LinesXStart[y], x - 1);
+                        }
+                    }
+                }
+            }
+
+            for (int y = currentSurface.m_MinY[maxXDrawable]; y <= currentSurface.m_MaxY[maxXDrawable]; y++)
+            {
+                DrawLine(y, m_LinesXStart[y], maxXDrawable);
+            }
+        }
     }
 }
 

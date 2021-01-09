@@ -6,6 +6,7 @@
 
 #include <vector>
 #include <array>
+#include <unordered_map>
 #include <cstring>
 #include <algorithm>
 
@@ -44,21 +45,54 @@ public:
 
     // Totally doom-inspired (Doom calls these 'Visplanes')
     // See Fabien Sanglard's really good book about the Doom Engine :)
-    struct FloorSurface
+    struct FlatSurface
     {
-        FloorSurface()
+        FlatSurface()
         {
-            std::fill(m_MinY.begin(), m_MinY.end(), WINDOW_HEIGHT);
-            std::fill(m_MaxY.begin(), m_MaxY.end(), 0);
-            // memset(m_MinY.data(), WINDOW_HEIGHT, sizeof(int) * WINDOW_WIDTH);
-            // memset(m_MaxY.data(), 0, sizeof(int) * WINDOW_WIDTH);
+            // std::fill(m_MinY.begin(), m_MinY.end(), WINDOW_HEIGHT);
+            // std::fill(m_MaxY.begin(), m_MaxY.end(), 0);
+            for (unsigned int x = 0; x < WINDOW_WIDTH; x++)
+            {
+                m_MinY[x] = WINDOW_HEIGHT;
+                m_MaxY[x] = 0;
+            }
+        }
+        
+        FlatSurface(const FlatSurface &iOther) :
+            m_MinX(iOther.m_MinX),
+            m_MaxX(iOther.m_MaxX),
+            m_Height(iOther.m_Height),
+            m_SectorIdx(iOther.m_SectorIdx)
+        {
+            memcpy(m_MinY, iOther.m_MinY, sizeof(int) * WINDOW_WIDTH);
+            memcpy(m_MaxY, iOther.m_MaxY, sizeof(int) * WINDOW_WIDTH);
+        }
+
+        bool Absorb(const FlatSurface &iOther)
+        {
+            if(iOther.m_Height != m_Height || iOther.m_SectorIdx != m_SectorIdx)
+                return false;
+
+            if(iOther.m_MinX >= m_MinX && iOther.m_MinX <= m_MaxX)
+                return false;
+
+            if(iOther.m_MaxX >= m_MinX && iOther.m_MinX <= m_MaxX)
+                return false;
+
+            memcpy(m_MinY + iOther.m_MinX, iOther.m_MinY + iOther.m_MinX, (iOther.m_MaxX - iOther.m_MinX + 1) * sizeof(int));
+            memcpy(m_MaxY + iOther.m_MinX, iOther.m_MaxY + iOther.m_MinX, (iOther.m_MaxX - iOther.m_MinX + 1) * sizeof(int));
+
+            m_MinX = std::min(iOther.m_MinX, m_MinX);
+            m_MaxX = std::max(iOther.m_MaxX, m_MaxX);
+
+            return true;
         }
 
         int m_MinX;
         int m_MaxX;
 
-        std::array<int, WINDOW_WIDTH> m_MinY;
-        std::array<int, WINDOW_WIDTH> m_MaxY;
+        int m_MinY[WINDOW_WIDTH];
+        int m_MaxY[WINDOW_WIDTH];
 
         int m_Height;
         int m_SectorIdx;
@@ -100,8 +134,9 @@ protected:
     inline void RenderColumn(int iT, int iMinVertexColor, int iMaxVertexColor,
                              int iMinY, int iMaxY, int iX,
                              int iR, int iG, int iB);
-    void SortFloorSurfaces();
-    void RenderFloorSurfaces();
+    bool AddFlatSurface(const FlatSurface &iFlatSurface);
+    void RenderFlatSurfacesLegacy();
+    void RenderFlatSurfaces();
 
 protected:
     bool isInsideFrustum(const Vertex &iVertex) const;
@@ -113,7 +148,12 @@ protected:
     unsigned char *m_pHorizOcclusionBuffer;
     int *m_pTopOcclusionBuffer;
     int *m_pBottomOcclusionBuffer;
-    std::vector<FloorSurface> m_FloorSurfaces;
+    
+    // Data used to render floors and ceilings
+    std::unordered_map<int, std::vector<FlatSurface>> m_FlatSurfaces; // Flat surfaces are stored int the map according to their height
+    int m_LinesXStart[WINDOW_HEIGHT];
+    int m_HeightYCache[WINDOW_HEIGHT];
+    int m_DistYCache[WINDOW_HEIGHT];
 
     Vertex m_PlayerPosition;
     int m_PlayerZ;
@@ -128,6 +168,7 @@ protected:
     const int m_MaxColorInterpolationDist;
 };
 
+#include <iostream>
 void KDTreeRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigned char g, unsigned char b)
 {
     idx = idx << 2u;
@@ -142,7 +183,7 @@ void KDTreeRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX,
                                              int &oT, int &oMinY, int &oMaxY,
                                              int &oMinYUnclamped, int &oMaxYUnclamped) const
 {
-    oT = ((iX - iMinX) * (1 << DECIMAL_SHIFT)) / (iMaxX - iMinX);
+    oT = iMaxX == iMinX ? 0 : ((iX - iMinX) * (1 << DECIMAL_SHIFT)) / (iMaxX - iMinX);
     oMinYUnclamped = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - oT) * iMinVertexBottomPixel + oT * iMaxVertexBottomPixel), DECIMAL_SHIFT);
     oMaxYUnclamped = ARITHMETIC_SHIFT((((1 << DECIMAL_SHIFT) - oT) * iMinVertexTopPixel + oT * iMaxVertexTopPixel), DECIMAL_SHIFT);
     oMinY = std::max<int>(oMinYUnclamped, m_pBottomOcclusionBuffer[iX]);
