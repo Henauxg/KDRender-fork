@@ -12,7 +12,6 @@
 #define FP_SHIFT 12
 
 #define FP32_HIGH(a, p) ((a) >> (p))
-#define FP32_LOW(a, p) (((a) << (32 - p)) >> (32 - p))
 
 template<unsigned int P>
 class FP32

@@ -41,6 +41,15 @@ CType sinInt(int iAngle)
     return static_cast<CType>(res);
 }
 
+CType tanInt(int iAngle)
+{
+    // Extremely non-optimized
+    // TODO: implement lookup table
+    float iAngleRad = static_cast<float>(iAngle) / (180.0 * static_cast<float>((1 << ANGLE_SHIFT))) * M_PI;
+    float res = tan(iAngleRad);
+    return static_cast<CType>(res);
+}
+
 int atanInt(CType iX)
 {
     // Extremely non-optimized

@@ -39,7 +39,8 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_PlayerHorizontalFOV(80 * (1 << ANGLE_SHIFT)),
     m_PlayerVerticalFOV((m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH),
     m_PlayerHeight(CType(30) / POSITION_SCALE),
-    m_MaxColorInterpolationDist(CType(500) / POSITION_SCALE)
+    m_MaxColorInterpolationDist(CType(500) / POSITION_SCALE),
+    m_FocalDist(WINDOW_WIDTH / (2 * tanInt(m_PlayerHorizontalFOV / 2)))
 {
     m_FlatSurfaces.reserve(20);
     memset(m_pFrameBuffer, 255u, sizeof(unsigned char) * 4u * WINDOW_HEIGHT * WINDOW_WIDTH);
@@ -186,11 +187,22 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
 void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, const Vertex &iMaxVertex, int iMinAngle, int iMaxAngle)
 {
     // TODO: there has to be (multiple) way(s) to refactor this harder
-    // TODO: computations are ugly, need to write a clean fixed-point arithmetic class instead of doing
-    // shady things
 
-    int minX = ((iMinAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV;
-    int maxX = ((iMaxAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV - 1;
+    // Need to correct for horizontal distortions around the edges of the projection screen
+    // See below
+    // Also see https://stackoverflow.com/questions/24173966/raycasting-engine-rendering-creating-slight-distortion-increasing-towards-edges
+
+    // Without horizontal distortion correction
+    // int minX = ((iMinAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV;
+    // int maxX = ((iMaxAngle + m_PlayerHorizontalFOV / 2) * WINDOW_WIDTH) / m_PlayerHorizontalFOV - 1;
+    
+    // Horizontal distortion correction
+    // int minX = WINDOW_WIDTH / 2 + tanInt(iMinAngle) / tanInt(m_PlayerHorizontalFOV / 2) * (WINDOW_WIDTH / 2);
+    // int maxX = WINDOW_WIDTH / 2 + tanInt(iMaxAngle) / tanInt(m_PlayerHorizontalFOV / 2) * (WINDOW_WIDTH / 2);
+
+    // Same as above but with little refacto
+    int minX = WINDOW_WIDTH / 2 + tanInt(iMinAngle) * m_FocalDist;
+    int maxX = WINDOW_WIDTH / 2 + tanInt(iMaxAngle) * m_FocalDist;
 
     if(minX > maxX)
         return;
@@ -198,8 +210,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     minX = Clamp(minX, 0, WINDOW_WIDTH - 1);
     maxX = Clamp(maxX, 0, WINDOW_WIDTH - 1);
 
-    CType minDist = DistInt(m_PlayerPosition, iMinVertex) * cosInt(iMinAngle); // Correction for distortion
-    CType maxDist = DistInt(m_PlayerPosition, iMaxVertex) * cosInt(iMaxAngle); // Correction for distortion
+    CType minDist = DistInt(m_PlayerPosition, iMinVertex) * cosInt(iMinAngle); // Correction for vertical distortion
+    CType maxDist = DistInt(m_PlayerPosition, iMaxVertex) * cosInt(iMaxAngle); // Correction for vertical distortion
 
     // TODO: perform actual clipping
     // Dirty hack
@@ -207,9 +219,9 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         return;
     minDist = minDist <= CType(0) ? CType(1) : minDist;
 
-    char r = iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
-    char g = iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
-    char b = iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
+    char r = 1; // iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
+    char g = 1; // iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
+    char b = 1; // iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
     int maxColorRange = iWall.m_VertexFrom.m_X == iWall.m_VertexTo.m_X ? 230 : 180;
     int minColorClamp = iWall.m_VertexFrom.m_X == iWall.m_VertexTo.m_X ? 55 : 50;
 
@@ -504,9 +516,9 @@ void KDTreeRenderer::RenderFlatSurfaces()
         {
             const FlatSurface &currentSurface = currentSurfaces[i];
 
-            char r = currentSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
-            char g = currentSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
-            char b = currentSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
+            char r = 1; // currentSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
+            char g = 1; // currentSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
+            char b = 1; // currentSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
             int maxColorRange = 150;
 
             auto DrawLine = [&](int iY, int iMinX, int iMaxX) {
@@ -643,6 +655,7 @@ CType KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
     {
         if(pNode->GetNbOfWalls()) // Should always be true
         {
+            oZ = m_PlayerHeight;
             Wall wall(GetWallFromNode(pNode, 0));
             int whichSide = WhichSide(wall.m_VertexFrom, wall.m_VertexTo, m_PlayerPosition);
             if(whichSide < 0)
@@ -651,7 +664,7 @@ CType KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
                 if (outSectorIdx >= 0)
                 {
                     Sector outSector = GetSectorFromKDSector(m_Map.m_Sectors[outSectorIdx]);
-                    oZ = outSector.m_Floor + m_PlayerHeight;
+                    oZ += outSector.m_Floor;
                     oZ = Clamp(oZ, outSector.m_Floor, outSector.m_Ceiling);
                 }
             }
@@ -661,7 +674,7 @@ CType KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
                 if (inSectorIdx >= 0)
                 {
                     Sector inSector = GetSectorFromKDSector(m_Map.m_Sectors[inSectorIdx]);
-                    oZ = inSector.m_Floor + m_PlayerHeight;
+                    oZ += inSector.m_Floor;
                     oZ = Clamp(oZ, inSector.m_Floor, inSector.m_Ceiling);
                 }
             }

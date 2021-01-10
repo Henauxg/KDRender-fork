@@ -153,11 +153,11 @@ protected:
     Vertex m_FrustumToLeft;
     Vertex m_FrustumToRight;
     Vertex m_Look;
-
     const int m_PlayerHorizontalFOV;
     const int m_PlayerVerticalFOV;
     const CType m_PlayerHeight;
     const CType m_MaxColorInterpolationDist;
+    const CType m_FocalDist;
 };
 
 #include <iostream>
