@@ -157,7 +157,8 @@ protected:
     const int m_PlayerVerticalFOV;
     const CType m_PlayerHeight;
     const CType m_MaxColorInterpolationDist;
-    const CType m_FocalDist;
+    const CType m_HorizontalDistortionCst;
+    const CType m_VerticalDistortionCst;
 };
 
 #include <iostream>

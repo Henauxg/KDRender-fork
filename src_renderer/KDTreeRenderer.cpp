@@ -40,7 +40,8 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_PlayerVerticalFOV((m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH),
     m_PlayerHeight(CType(30) / POSITION_SCALE),
     m_MaxColorInterpolationDist(CType(500) / POSITION_SCALE),
-    m_FocalDist(WINDOW_WIDTH / (2 * tanInt(m_PlayerHorizontalFOV / 2)))
+    m_HorizontalDistortionCst(1 / (2 * tanInt(m_PlayerHorizontalFOV / 2))),
+    m_VerticalDistortionCst(1 / (2 * tanInt(m_PlayerVerticalFOV / 2)))
 {
     m_FlatSurfaces.reserve(20);
     memset(m_pFrameBuffer, 255u, sizeof(unsigned char) * 4u * WINDOW_HEIGHT * WINDOW_WIDTH);
@@ -113,18 +114,22 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
     for (unsigned int i = 0; i < pNode->m_Walls.size(); i++)
     {
         KDTreeRenderer::Wall wall(GetWallFromNode(pNode, i));
+
+        bool vertexFromIsBehindPlayer = DotProduct(m_PlayerPosition, m_Look, m_PlayerPosition, wall.m_VertexFrom) <= 0;
+        bool vertexToIsBehindPlayer = DotProduct(m_PlayerPosition, m_Look, m_PlayerPosition, wall.m_VertexTo) <= 0;
+
         if ((WhichSide(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom) <= 0 &&
              WhichSide(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexTo) <= 0) ||
             (WhichSide(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom) >= 0 &&
              WhichSide(m_PlayerPosition, m_FrustumToRight, wall.m_VertexTo) >= 0) ||
-            (DotProduct(m_PlayerPosition, m_Look, m_PlayerPosition, wall.m_VertexFrom) <= 0 &&
-             DotProduct(m_PlayerPosition, m_Look, m_PlayerPosition, wall.m_VertexTo) <= 0))
+            (vertexFromIsBehindPlayer && vertexToIsBehindPlayer))
         {
             // Culling (wall is entirely outside frustum)
             continue;
         }
         else
         {
+            // Clip against frustum
             int minAngle = m_PlayerHorizontalFOV / 2, maxAngle = -m_PlayerHorizontalFOV / 2;
             Vertex minVertex, maxVertex;
 
@@ -189,6 +194,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     // TODO: there has to be (multiple) way(s) to refactor this harder
 
     // Need to correct for horizontal distortions around the edges of the projection screen
+    // I'm leaving the old formulas as comments since they are much more intuitive
+
     // See below
     // Also see https://stackoverflow.com/questions/24173966/raycasting-engine-rendering-creating-slight-distortion-increasing-towards-edges
 
@@ -201,8 +208,8 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     // int maxX = WINDOW_WIDTH / 2 + tanInt(iMaxAngle) / tanInt(m_PlayerHorizontalFOV / 2) * (WINDOW_WIDTH / 2);
 
     // Same as above but with little refacto
-    int minX = WINDOW_WIDTH / 2 + tanInt(iMinAngle) * m_FocalDist;
-    int maxX = WINDOW_WIDTH / 2 + tanInt(iMaxAngle) * m_FocalDist;
+    int minX = WINDOW_WIDTH / 2 + WINDOW_WIDTH * tanInt(iMinAngle) * m_HorizontalDistortionCst;
+    int maxX = WINDOW_WIDTH / 2 + WINDOW_WIDTH * tanInt(iMaxAngle) * m_HorizontalDistortionCst;
 
     if(minX > maxX)
         return;
@@ -219,9 +226,9 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         return;
     minDist = minDist <= CType(0) ? CType(1) : minDist;
 
-    char r = 1; // iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
-    char g = 1; // iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
-    char b = 1; // iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
+    char r = iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
+    char g = iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
+    char b = iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
     int maxColorRange = iWall.m_VertexFrom.m_X == iWall.m_VertexTo.m_X ? 230 : 180;
     int minColorClamp = iWall.m_VertexFrom.m_X == iWall.m_VertexTo.m_X ? 55 : 50;
 
@@ -247,11 +254,24 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         CType eyeToTop = inSector.m_Ceiling - m_PlayerZ;
         CType eyeToBottom = m_PlayerZ - inSector.m_Floor;
 
-        int minVertexBottomPixel = ((-atanInt(eyeToBottom / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-        int minVertexTopPixel = ((atanInt(eyeToTop / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        // Same here, need to correct for distortion
+        // I'm leaving the old formulas as comments since they are much more intuitive
 
-        int maxVertexBottomPixel = ((-atanInt(eyeToBottom / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-        int maxVertexTopPixel = ((atanInt(eyeToTop / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        // Without vertical distortion
+        // int minVertexBottomPixel = ((-atanInt(eyeToBottom / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        // int minVertexTopPixel = ((atanInt(eyeToTop / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        // int maxVertexBottomPixel = ((-atanInt(eyeToBottom / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+        // int maxVertexTopPixel = ((atanInt(eyeToTop / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+
+        int minAngleEyeToBottom = atanInt(eyeToBottom / minDist);
+        int minAngleEyeToTop = atanInt(eyeToTop / minDist);
+        int maxAngleEyeToBottom = atanInt(eyeToBottom / maxDist);
+        int maxAngleEyeToTop = atanInt(eyeToTop / maxDist);
+
+        int minVertexBottomPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * tanInt(minAngleEyeToBottom) * m_VerticalDistortionCst;
+        int minVertexTopPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * tanInt(minAngleEyeToTop) * m_VerticalDistortionCst;
+        int maxVertexBottomPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * tanInt(maxAngleEyeToBottom) * m_VerticalDistortionCst;
+        int maxVertexTopPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * tanInt(maxAngleEyeToTop) * m_VerticalDistortionCst;
 
         FlatSurface floorSurface;
         floorSurface.m_MinX = minX;
@@ -305,11 +325,24 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                 CType eyeToTopFloor = m_PlayerZ - std::max(inSector.m_Floor, outSector.m_Floor);
                 CType eyeToBottomFloor = m_PlayerZ - std::min(inSector.m_Floor, outSector.m_Floor);
 
-                int minVertexBottomPixel = ((-atanInt(eyeToBottomFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-                int minVertexTopPixel = ((-atanInt(eyeToTopFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                // Same here, need to correct for distortion
+                // I'm leaving the old formulas as comments since they are much more intuitive
 
-                int maxVertexBottomPixel = ((-atanInt(eyeToBottomFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-                int maxVertexTopPixel = ((-atanInt(eyeToTopFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                // Without vertical distortion
+                // int minVertexBottomPixel = ((-atanInt(eyeToBottomFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                // int minVertexTopPixel = ((-atanInt(eyeToTopFloor / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                // int maxVertexBottomPixel = ((-atanInt(eyeToBottomFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                // int maxVertexTopPixel = ((-atanInt(eyeToTopFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+
+                int minAngleEyeToBottomFloor = atanInt(eyeToBottomFloor / minDist);
+                int minAngleEyeToTopFloor = atanInt(eyeToTopFloor / minDist);
+                int maxAngleEyeToBottomFloor = atanInt(eyeToBottomFloor / maxDist);
+                int maxAngleEyeToTopFloor = atanInt(eyeToTopFloor / maxDist);
+
+                int minVertexBottomPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * tanInt(minAngleEyeToBottomFloor) * m_VerticalDistortionCst;
+                int minVertexTopPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * tanInt(minAngleEyeToTopFloor) * m_VerticalDistortionCst;
+                int maxVertexBottomPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * tanInt(maxAngleEyeToBottomFloor) * m_VerticalDistortionCst;
+                int maxVertexTopPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * tanInt(maxAngleEyeToTopFloor) * m_VerticalDistortionCst;
 
                 FlatSurface floorSurface;
                 floorSurface.m_MinX = minX;
@@ -358,11 +391,23 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                 CType eyeToTopCeiling = std::max(inSector.m_Ceiling, outSector.m_Ceiling) - m_PlayerZ;
                 CType eyeToBottomCeiling = std::min(inSector.m_Ceiling, outSector.m_Ceiling) - m_PlayerZ;
 
-                int minVertexBottomPixel = ((atanInt(eyeToBottomCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-                int minVertexTopPixel = ((atanInt(eyeToTopCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                // Same here, need to correct for distortion
+                // I'm leaving the old formulas as comments since they are much more intuitive
 
-                int maxVertexBottomPixel = ((atanInt(eyeToBottomCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
-                int maxVertexTopPixel = ((atanInt(eyeToTopCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                // int minVertexBottomPixel = ((atanInt(eyeToBottomCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                // int minVertexTopPixel = ((atanInt(eyeToTopCeiling / minDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                // int maxVertexBottomPixel = ((atanInt(eyeToBottomCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+                // int maxVertexTopPixel = ((atanInt(eyeToTopCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
+
+                int minAngleEyeToBottomCeiling = atanInt(eyeToBottomCeiling / minDist);
+                int minAngleEyeToTopCeiling = atanInt(eyeToTopCeiling / minDist);
+                int maxAngleEyeToBottomCeiling = atanInt(eyeToBottomCeiling / maxDist);
+                int maxAngleEyeToTopCeiling = atanInt(eyeToTopCeiling / maxDist);
+
+                int minVertexBottomPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * tanInt(minAngleEyeToBottomCeiling) * m_VerticalDistortionCst;
+                int minVertexTopPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * tanInt(minAngleEyeToTopCeiling) * m_VerticalDistortionCst;
+                int maxVertexBottomPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * tanInt(maxAngleEyeToBottomCeiling) * m_VerticalDistortionCst;
+                int maxVertexTopPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * tanInt(maxAngleEyeToTopCeiling) * m_VerticalDistortionCst;
 
                 FlatSurface ceilingSurface;
                 ceilingSurface.m_MinX = minX;
@@ -516,9 +561,9 @@ void KDTreeRenderer::RenderFlatSurfaces()
         {
             const FlatSurface &currentSurface = currentSurfaces[i];
 
-            char r = 1; // currentSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
-            char g = 1; // currentSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
-            char b = 1; // currentSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
+            char r = currentSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
+            char g = currentSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
+            char b = currentSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
             int maxColorRange = 150;
 
             auto DrawLine = [&](int iY, int iMinX, int iMaxX) {

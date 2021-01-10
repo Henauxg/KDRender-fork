@@ -36,7 +36,7 @@ CType sinInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
-    float iAngleRad = static_cast<float>(iAngle) / (180.0 * static_cast<float>((1 << ANGLE_SHIFT))) * M_PI;
+    double iAngleRad = static_cast<float>(iAngle) / (180.0 * static_cast<float>((1 << ANGLE_SHIFT))) * M_PI;
     float res = sin(iAngleRad);
     return static_cast<CType>(res);
 }
@@ -45,7 +45,7 @@ CType tanInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
-    float iAngleRad = static_cast<float>(iAngle) / (180.0 * static_cast<float>((1 << ANGLE_SHIFT))) * M_PI;
+    double iAngleRad = static_cast<float>(iAngle) / (180.0 * static_cast<float>((1 << ANGLE_SHIFT))) * M_PI;
     float res = tan(iAngleRad);
     return static_cast<CType>(res);
 }
@@ -55,7 +55,7 @@ int atanInt(CType iX)
     // Extremely non-optimized
     // TODO: implement lookup table
     float x = static_cast<float>(iX);
-    float atanVal = atan(x) * (180.0 * static_cast<float>((1 << ANGLE_SHIFT))) / M_PI;
+    double atanVal = atan(x) * (180.0 * static_cast<float>((1 << ANGLE_SHIFT))) / M_PI;
     return static_cast<int>(atanVal);
 }
 
@@ -125,7 +125,7 @@ int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
     CType det = Det(iFrom, iTo1, iFrom, iTo2);
     // Extremely non-optimized
     // TODO: implement lookup table
-    float angle = -atan2(det, dot);
+    double angle = -atan2(det, dot);
     return static_cast<int>(angle / M_PI * (180.0 * static_cast<float>((1 << ANGLE_SHIFT))));
 }
 

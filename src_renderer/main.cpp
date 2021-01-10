@@ -162,7 +162,7 @@ int main(int argc, char **argv)
                         std::cout << "Dumping player info:" << std::endl;
                         std::cout << "x = " << playerPos.m_X << std::endl;
                         std::cout << "y = " << playerPos.m_Y << std::endl;
-                        std::cout << "dir = " << playerDir << std::endl;
+                        std::cout << "dir = " << playerDir << " (= " << static_cast<float>(playerDir) / (1 << ANGLE_SHIFT) << " degres)" << std::endl;
                     }
                     break;
                 default:
@@ -181,7 +181,7 @@ int main(int argc, char **argv)
         //     deltaT += (float)(clock.getElapsedTime().asMilliseconds());
         // }
 
-        std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+        // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
 
         CType dPos = ((directionFront + directionBack) * dr * static_cast<CType>(deltaT)) / 1000;
         CType dPosOrtho = ((directionStrafeLeft + directionStrafeRight) * dr * static_cast<CType>(deltaT)) / 1000;

@@ -5,7 +5,7 @@
 #include "Map.h"
 #include "KDTreeBuilder.h"
 #include "KDTreeMap.h"
-LES MAKEFILES CA PUE
+
 int main(int argc, char **argv)
 {
     std::string iFilePath;
