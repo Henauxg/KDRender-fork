@@ -67,6 +67,16 @@ public:
     compiler optimizations are turned off. I therefore tried to avoid making unecessary
     objets or function calls */
 
+    friend constexpr FP32<P> operator<<(const FP32<P> &iN, unsigned int iShift)
+    {
+        return FromFPVal(iN.m_Val << iShift);
+    }
+
+    friend constexpr FP32<P> operator>>(const FP32<P> &iN, unsigned int iShift)
+    {
+        return FromFPVal(iN.m_Val >> iShift);
+    }
+
     constexpr FP32<P> operator-() const
     {
         FP32<P> ret;

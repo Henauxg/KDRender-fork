@@ -259,3 +259,17 @@ sector
         floor {130}
     }
 }
+
+sector
+{
+    outline
+    {
+        vertices {{-112, -188} {-58, -188} {-58, -242} {-112, -242}}
+    }
+
+    elevation
+    {
+        ceiling {145}
+        floor {10}
+    }
+}

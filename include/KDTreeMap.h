@@ -13,6 +13,12 @@ namespace KDMapData
         int ceiling;
     };
 
+    struct Vertex
+    {
+        int m_X;
+        int m_Y;
+    };
+
     class Wall
     {
     public:
@@ -20,8 +26,8 @@ namespace KDMapData
         virtual ~Wall() {}
 
     public:
-        int m_From;
-        int m_To;
+        Vertex m_From;
+        Vertex m_To;
 
     public:
         int m_InSector;
@@ -35,7 +41,8 @@ public:
     enum class SplitPlane
     {
         XConst,
-        YConst
+        YConst,
+        None
     };
 
 public:
@@ -58,24 +65,22 @@ public:
     {
         const KDMapData::Wall &kdWall = m_Walls[iWallIdx];
         WallType ret;
-        if (m_SplitPlane == KDTreeNode::SplitPlane::XConst)
-        {
-            ret.m_VertexFrom.m_X = CType(m_SplitOffset) / POSITION_SCALE;
-            ret.m_VertexTo.m_X = ret.m_VertexFrom.m_X;
 
-            ret.m_VertexFrom.m_Y = CType(kdWall.m_From) / POSITION_SCALE;
-            ret.m_VertexTo.m_Y = CType(kdWall.m_To) / POSITION_SCALE;
-        }
-        else
-        {
-            ret.m_VertexFrom.m_Y = CType(m_SplitOffset) / POSITION_SCALE;
-            ret.m_VertexTo.m_Y = ret.m_VertexFrom.m_Y;
+        ret.m_VertexFrom.m_X = static_cast<CType>(kdWall.m_From.m_X) / POSITION_SCALE;
+        ret.m_VertexFrom.m_Y = static_cast<CType>(kdWall.m_From.m_Y) / POSITION_SCALE;
 
-            ret.m_VertexFrom.m_X = CType(kdWall.m_From) / POSITION_SCALE;
-            ret.m_VertexTo.m_X = CType(kdWall.m_To) / POSITION_SCALE;
-        }
+        ret.m_VertexTo.m_X = static_cast<CType>(kdWall.m_To.m_X) / POSITION_SCALE;
+        ret.m_VertexTo.m_Y = static_cast<CType>(kdWall.m_To.m_Y) / POSITION_SCALE;
+
         return ret;
     }
+
+public:
+    // For debugging purpose
+    int ComputeDepth() const;
+
+protected:
+    int RecursiveComputeDepth(const KDTreeNode *ipNode) const;
 
 protected:
     std::vector<KDMapData::Wall> m_Walls;
@@ -105,6 +110,10 @@ public:
     CType GetPlayerStartX() const;
     CType GetPlayerStartY() const;
     int GetPlayerStartDirection() const;
+
+public:
+    // For debugging purpose only
+    int ComputeDepth() const;
 
 protected:
     unsigned int ComputeStreamSize() const;

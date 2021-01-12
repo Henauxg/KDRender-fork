@@ -52,7 +52,7 @@ void KDTreeNode::Stream(char *&ioData, unsigned int &oNbBytesWritten) const
         ioData += sizeof(KDMapData::Wall);
     }
 
-    *ioData = m_SplitPlane == SplitPlane::XConst ? 0x0 : 0x1;
+    *ioData = m_SplitPlane == SplitPlane::XConst ? 0x0 : (m_SplitPlane == SplitPlane::YConst ? 0x1 : 0x2);
     ioData += sizeof(char);
 
     *(reinterpret_cast<int *>(ioData)) = m_SplitOffset;
@@ -94,6 +94,8 @@ void KDTreeNode::UnStream(const char *ipData, unsigned int &oNbBytesRead)
         m_SplitPlane = KDTreeNode::SplitPlane::XConst;
     else if (splitPlaneInt == 1)
         m_SplitPlane = KDTreeNode::SplitPlane::YConst;
+    else if (splitPlaneInt == 2)
+        m_SplitPlane = KDTreeNode::SplitPlane::None;
 
     m_SplitOffset = *(reinterpret_cast<const int *>(ipData));
     ipData += sizeof(unsigned int);
@@ -130,6 +132,19 @@ void KDTreeNode::UnStream(const char *ipData, unsigned int &oNbBytesRead)
             ipData += nbBytesRead;
         }
     }
+}
+
+int KDTreeNode::ComputeDepth() const
+{
+    return RecursiveComputeDepth(this);
+}
+
+int KDTreeNode::RecursiveComputeDepth(const KDTreeNode *ipNode) const
+{
+    if(!ipNode)
+        return 0;
+    else
+        return 1 + std::max(RecursiveComputeDepth(ipNode->m_NegativeSide), RecursiveComputeDepth(ipNode->m_PositiveSide));
 }
 
 KDTreeMap::KDTreeMap() : m_RootNode(nullptr)
@@ -246,4 +261,12 @@ CType KDTreeMap::GetPlayerStartY() const
 int KDTreeMap::GetPlayerStartDirection() const
 {
     return m_PlayerStartDirection;
+}
+
+int KDTreeMap::ComputeDepth() const
+{
+    if(m_RootNode)
+        return m_RootNode->ComputeDepth();
+    else
+        return 0;
 }

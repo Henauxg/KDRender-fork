@@ -36,7 +36,7 @@ namespace
 KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_Map(iMap),
     m_pFrameBuffer(new unsigned char[WINDOW_HEIGHT * WINDOW_WIDTH * 4u]),
-    m_PlayerHorizontalFOV(80 * (1 << ANGLE_SHIFT)),
+    m_PlayerHorizontalFOV(90 * (1 << ANGLE_SHIFT)),
     m_PlayerVerticalFOV((m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH),
     m_PlayerHeight(CType(30) / POSITION_SCALE),
     m_MaxColorInterpolationDist(CType(500) / POSITION_SCALE),
@@ -103,7 +103,7 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
     bool positiveSide;
     if (pNode->m_SplitPlane == KDTreeNode::SplitPlane::XConst)
         positiveSide = m_PlayerPosition.m_X > (CType(pNode->m_SplitOffset) / POSITION_SCALE);
-    else
+    else if (pNode->m_SplitPlane == KDTreeNode::SplitPlane::YConst)
         positiveSide = m_PlayerPosition.m_Y > (CType(pNode->m_SplitOffset) / POSITION_SCALE);
 
     if (positiveSide && pNode->m_PositiveSide)
@@ -217,6 +217,9 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     minX = Clamp(minX, 0, WINDOW_WIDTH - 1);
     maxX = Clamp(maxX, 0, WINDOW_WIDTH - 1);
 
+    // We need further precision for this ratio
+    CType InvMinMaxXRange = maxX == minX ? static_cast<CType>(0) : (1 << 7u) / CType(maxX - minX);
+
     CType minDist = DistInt(m_PlayerPosition, iMinVertex) * cosInt(iMinAngle); // Correction for vertical distortion
     CType maxDist = DistInt(m_PlayerPosition, iMaxVertex) * cosInt(iMaxAngle); // Correction for vertical distortion
 
@@ -290,7 +293,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
             // TODO: optimize divisions
             if (!m_pHorizOcclusionBuffer[x])
             {
-                ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
+                ComputeRenderParameters(x, minX, maxX, InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
 
                 floorSurface.m_MaxY[x] = std::min(minYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
                 floorSurface.m_MinY[x] = m_pBottomOcclusionBuffer[x];
@@ -359,7 +362,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                     // TODO: optimize divisions
                     if (!m_pHorizOcclusionBuffer[x])
                     {
-                        ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
+                        ComputeRenderParameters(x, minX, maxX, InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
 
                         if(wallIsVisible)
                             floorSurface.m_MaxY[x] = std::min(minYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
@@ -425,7 +428,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                     // TODO: optimize divisions
                     if (!m_pHorizOcclusionBuffer[x])
                     {
-                        ComputeRenderParameters(x, minX, maxX, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
+                        ComputeRenderParameters(x, minX, maxX, InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
 
                         if(wallIsVisible)
                             ceilingSurface.m_MinY[x] = std::max(maxYUnclamped, m_pBottomOcclusionBuffer[x]);
@@ -547,15 +550,15 @@ void KDTreeRenderer::RenderFlatSurfaces()
     // }
 
     for(unsigned int i = 0; i < WINDOW_HEIGHT; i++)
-    {
         m_LinesXStart[i] = -1;
-        m_HeightYCache[i] = 0;
-        m_DistYCache[i] = -1;
-    }
 
     for(const auto &keyVal : m_FlatSurfaces)
     {
+        const CType currentHeight = keyVal.first;
         const std::vector<FlatSurface> &currentSurfaces = keyVal.second;
+
+        for(unsigned int i = 0; i < WINDOW_HEIGHT; i++)
+            m_DistYCache[i] = -1;
 
         for (unsigned int i = 0; i < currentSurfaces.size(); i++)
         {
@@ -570,10 +573,8 @@ void KDTreeRenderer::RenderFlatSurfaces()
                 CType dist = -1;
                 int color;
 
-                if (m_HeightYCache[iY] == currentSurface.m_Height && m_DistYCache[iY] >= 0)
-                {
+                if (m_DistYCache[iY] >= 0)
                     dist = m_DistYCache[iY];
-                }
                 else
                 {
                     int theta = (m_PlayerVerticalFOV * (2 * iY - WINDOW_HEIGHT)) / (2 * WINDOW_HEIGHT);
@@ -584,7 +585,6 @@ void KDTreeRenderer::RenderFlatSurfaces()
                         dist = (m_PlayerZ - currentSurface.m_Height) / sinTheta;
                         dist = dist < 0 ? -dist : dist;
                         dist = std::min(dist, m_MaxColorInterpolationDist);
-                        m_HeightYCache[iY] = currentSurface.m_Height;
                         m_DistYCache[iY] = dist;
                     }
                 }
@@ -681,15 +681,17 @@ CType KDTreeRenderer::ComputeZ()
 
 CType KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
 {
+    static unsigned pouet = 0;
+
     if(!pNode)
         return 0; // Should not happen
 
     CType oZ = 0;
 
     bool positiveSide;
-    if(pNode->m_SplitPlane == KDTreeNode::SplitPlane::XConst)
+    if (pNode->m_SplitPlane == KDTreeNode::SplitPlane::XConst)
         positiveSide = m_PlayerPosition.m_X > (CType(pNode->m_SplitOffset) / POSITION_SCALE);
-    else
+    else if (pNode->m_SplitPlane == KDTreeNode::SplitPlane::YConst)
         positiveSide = m_PlayerPosition.m_Y > (CType(pNode->m_SplitOffset) / POSITION_SCALE);
 
     // We are on a terminal node

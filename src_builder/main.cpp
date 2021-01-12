@@ -104,11 +104,10 @@ int main(int argc, char **argv)
         }
         pStreamData = nullptr;
 
+        std::cout << "KD-Tree successfully built (depth = " << pKDTreeMap->ComputeDepth() << ")" << std::endl;
         delete pKDTreeMap;
     }
     pKDTreeMap = nullptr;
-
-    std::cout << "KD-Tree successfully built" << std::endl;
 
     return 0;
 }
