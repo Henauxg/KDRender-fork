@@ -83,9 +83,6 @@ namespace KDBData
             PARTIAL, // "hard" intersection
             UNDETERMINED
         };
-
-        // Returns the relationship between this and iSector2 (in this order)
-        Relationship FindRelationship(const Sector &iSector2) const;
     };
 };
 

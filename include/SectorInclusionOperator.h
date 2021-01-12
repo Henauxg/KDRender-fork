@@ -57,6 +57,9 @@ public:
 protected:
     void ResetIsInsideMatrix();
 
+    // Returns the relationship (inclusion, "hard" intersection or undetermined) between iSector1 and iSector2 (in this order)
+    KDBData::Sector::Relationship FindRelationship(const KDBData::Sector &iSector1, const KDBData::Sector &iSector2) const;
+
 protected:
     std::vector<KDBData::Sector> &m_Sectors;
     std::vector<std::vector<bool>> m_IsInsideMatrix;
