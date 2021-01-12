@@ -12,12 +12,12 @@ WallBreakerOperator::~WallBreakerOperator()
 {
 }
 
-MapBuildData::ErrorCode WallBreakerOperator::Run(const std::vector<MapBuildData::Wall> &iWalls, std::vector<MapBuildData::Wall> &oWalls)
+KDBData::Error WallBreakerOperator::Run(const std::vector<KDBData::Wall> &iWalls, std::vector<KDBData::Wall> &oWalls)
 {
-    MapBuildData::ErrorCode ret = MapBuildData::ErrorCode::OK;
+    KDBData::Error ret = KDBData::Error::OK;
 
-    std::vector<MapBuildData::Wall> xConstWalls;
-    std::vector<MapBuildData::Wall> yConstWalls;
+    std::vector<KDBData::Wall> xConstWalls;
+    std::vector<KDBData::Wall> yConstWalls;
 
     for (unsigned int i = 0; i < iWalls.size(); i++)
     {
@@ -26,23 +26,23 @@ MapBuildData::ErrorCode WallBreakerOperator::Run(const std::vector<MapBuildData:
         else if (iWalls[i].GetConstCoordinate() == 1)
             yConstWalls.push_back(iWalls[i]);
         else
-            ret = MapBuildData::ErrorCode::CANNOT_BREAK_WALL;
+            ret = KDBData::Error::CANNOT_BREAK_WALL;
     }
 
-    if (ret != MapBuildData::ErrorCode::OK)
+    if (ret != KDBData::Error::OK)
         return ret;
 
     // Build cluster of walls that have the same const coordinate
     std::sort(xConstWalls.begin(), xConstWalls.end());
     std::sort(yConstWalls.begin(), yConstWalls.end());
 
-    std::vector<std::vector<MapBuildData::Wall> *> pCurrentWalls;
+    std::vector<std::vector<KDBData::Wall> *> pCurrentWalls;
     pCurrentWalls.push_back(&xConstWalls);
     pCurrentWalls.push_back(&yConstWalls);
 
     for (unsigned int w = 0; w < pCurrentWalls.size(); w++)
     {
-        std::vector<MapBuildData::Wall> &walls = *pCurrentWalls[w];
+        std::vector<KDBData::Wall> &walls = *pCurrentWalls[w];
         if (!walls.empty())
         {
             int constCoor = walls[0].GetConstCoordinate();
@@ -50,16 +50,16 @@ MapBuildData::ErrorCode WallBreakerOperator::Run(const std::vector<MapBuildData:
             unsigned int i = 0;
             while (i < walls.size())
             {
-                std::vector<MapBuildData::Wall> wallCluster;
-                std::vector<MapBuildData::Wall> brokenWallsCluster;
+                std::vector<KDBData::Wall> wallCluster;
+                std::vector<KDBData::Wall> brokenWallsCluster;
                 while (i < walls.size() && walls[i].m_VertexFrom.GetCoord(constCoor) == constVal)
                 {
                     wallCluster.push_back(walls[i]);
                     i++;
                 }
 
-                MapBuildData::ErrorCode localErr;
-                if ((localErr = RunOnCluster(wallCluster, brokenWallsCluster)) != MapBuildData::ErrorCode::OK)
+                KDBData::Error localErr;
+                if ((localErr = RunOnCluster(wallCluster, brokenWallsCluster)) != KDBData::Error::OK)
                     ret = localErr;
                 else // Everything went fine
                     oWalls.insert(oWalls.end(), brokenWallsCluster.begin(), brokenWallsCluster.end());
@@ -73,9 +73,9 @@ MapBuildData::ErrorCode WallBreakerOperator::Run(const std::vector<MapBuildData:
     return ret;
 }
 
-MapBuildData::ErrorCode WallBreakerOperator::RunOnCluster(const std::vector<MapBuildData::Wall> &iWalls, std::vector<MapBuildData::Wall> &oWalls)
+KDBData::Error WallBreakerOperator::RunOnCluster(const std::vector<KDBData::Wall> &iWalls, std::vector<KDBData::Wall> &oWalls)
 {
-    MapBuildData::ErrorCode ret = MapBuildData::ErrorCode::OK;
+    KDBData::Error ret = KDBData::Error::OK;
 
     if (iWalls.empty())
         return ret;
@@ -84,9 +84,9 @@ MapBuildData::ErrorCode WallBreakerOperator::RunOnCluster(const std::vector<MapB
     constCoord = iWalls[0].GetConstCoordinate();
     varCoord = (constCoord + 1) % 2;
     if (constCoord == 2) // Invalid result
-        return MapBuildData::ErrorCode::CANNOT_BREAK_WALL;
+        return KDBData::Error::CANNOT_BREAK_WALL;
 
-    std::vector<MapBuildData::Vertex> sortedVertices;
+    std::vector<KDBData::Vertex> sortedVertices;
     sortedVertices.push_back(iWalls[0].m_VertexFrom);
     sortedVertices.push_back(iWalls[0].m_VertexTo);
 
@@ -94,27 +94,27 @@ MapBuildData::ErrorCode WallBreakerOperator::RunOnCluster(const std::vector<MapB
     {
         if (iWalls[i].m_VertexFrom.GetCoord(constCoord) != iWalls[i].m_VertexTo.GetCoord(constCoord) ||
             iWalls[i].m_VertexFrom.GetCoord(constCoord) != iWalls[0].m_VertexFrom.GetCoord(constCoord))
-            ret = MapBuildData::ErrorCode::CANNOT_BREAK_WALL;
+            ret = KDBData::Error::CANNOT_BREAK_WALL;
 
         sortedVertices.push_back(iWalls[i].m_VertexFrom);
         sortedVertices.push_back(iWalls[i].m_VertexTo);
     }
 
-    if (ret != MapBuildData::ErrorCode::OK)
+    if (ret != KDBData::Error::OK)
         return ret;
 
     std::sort(sortedVertices.begin(), sortedVertices.end());
     auto last = std::unique(sortedVertices.begin(), sortedVertices.end());
     sortedVertices.erase(last, sortedVertices.end());
 
-    std::vector<MapBuildData::Wall> brokenWalls;
+    std::vector<KDBData::Wall> brokenWalls;
 
     for (unsigned int i = 0; i < iWalls.size(); i++)
     {
-        MapBuildData::Wall currentWall = iWalls[i];
+        KDBData::Wall currentWall = iWalls[i];
         for (unsigned int j = 1; j < sortedVertices.size(); j++)
         {
-            MapBuildData::Wall minWall, maxWall;
+            KDBData::Wall minWall, maxWall;
             if (SplitWall(currentWall, sortedVertices[j], minWall, maxWall))
             {
                 brokenWalls.push_back(minWall);
@@ -127,7 +127,7 @@ MapBuildData::ErrorCode WallBreakerOperator::RunOnCluster(const std::vector<MapB
     // Find all subsets of walls that are geometrically equal. Each subset is replaced
     // with a unique wall whose inner sector is the innermost sector of the whole set (same
     // goes for the outer sector)
-    std::vector<MapBuildData::Wall> uniqueWalls;
+    std::vector<KDBData::Wall> uniqueWalls;
     for (unsigned int i = 0; i < brokenWalls.size(); i++)
     {
         int found = -1;
@@ -142,7 +142,7 @@ MapBuildData::ErrorCode WallBreakerOperator::RunOnCluster(const std::vector<MapB
 
         if (found >= 0)
         {
-            MapBuildData::Wall newWall = brokenWalls[i];
+            KDBData::Wall newWall = brokenWalls[i];
             newWall.m_InSector = m_SectorInclusions.GetInnermostSector(brokenWalls[i].m_InSector, uniqueWalls[found].m_InSector);
             newWall.m_OutSector = m_SectorInclusions.GetOutermostSector(brokenWalls[i].m_OutSector, uniqueWalls[found].m_OutSector);
             uniqueWalls[found] = newWall;
@@ -174,8 +174,8 @@ MapBuildData::ErrorCode WallBreakerOperator::RunOnCluster(const std::vector<MapB
     return ret;
 }
 
-bool WallBreakerOperator::SplitWall(MapBuildData::Wall iWall, const MapBuildData::Vertex &iVertex,
-                                    MapBuildData::Wall &oMinWall, MapBuildData::Wall &oMaxWall) const
+bool WallBreakerOperator::SplitWall(KDBData::Wall iWall, const KDBData::Vertex &iVertex,
+                                    KDBData::Wall &oMinWall, KDBData::Wall &oMaxWall) const
 {
     bool hasBeenSplit = false;
 
@@ -198,8 +198,8 @@ bool WallBreakerOperator::SplitWall(MapBuildData::Wall iWall, const MapBuildData
     if (iWall.m_VertexFrom.GetCoord(varCoord) < iVertex.GetCoord(varCoord) &&
         iVertex.GetCoord(varCoord) < iWall.m_VertexTo.GetCoord(varCoord))
     {
-        oMinWall = MapBuildData::Wall(iWall);
-        oMaxWall = MapBuildData::Wall(iWall);
+        oMinWall = KDBData::Wall(iWall);
+        oMaxWall = KDBData::Wall(iWall);
 
         oMinWall.m_VertexTo.SetCoord(varCoord, iVertex.GetCoord(varCoord));
         oMaxWall.m_VertexFrom.SetCoord(varCoord, iVertex.GetCoord(varCoord));

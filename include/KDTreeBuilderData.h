@@ -1,14 +1,14 @@
-#ifndef MapBuildData_h
-#define MapBuildData_h
+#ifndef KDTreeBuilderData_h
+#define KDTreeBuilderData_h
 
 #include "Map.h"
 
 #include <vector>
 #include <list>
 
-namespace MapBuildData
+namespace KDBData
 {
-    enum class ErrorCode
+    enum class Error
     {
         OK,
         INVALID_POLYGON,

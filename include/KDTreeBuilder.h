@@ -18,17 +18,17 @@ public:
     KDTreeMap* GetOutputTree();
 
 protected:
-    MapBuildData::ErrorCode BuildSectors(const Map &iMap);
-    MapBuildData::ErrorCode BuildKDTree(KDTreeMap *&oKDTree);
+    KDBData::Error BuildSectors(const Map &iMap);
+    KDBData::Error BuildKDTree(KDTreeMap *&oKDTree);
 
 protected:
-    MapBuildData::ErrorCode BuildSector(const Map::Data::Sector &iMapSector, MapBuildData::Sector &oSector);
-    MapBuildData::ErrorCode BuildPolygon(const Map::Data::Sector::Polygon &iPolygon, int iDesiredOrientation, std::list<MapBuildData::Wall> &oWalls);
-    MapBuildData::ErrorCode RecursiveBuildKDTree(std::list<MapBuildData::Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, KDTreeNode *&oKDTree);
-    void SplitWallSet(std::list<MapBuildData::Wall> &ioWalls, KDTreeNode::SplitPlane iSplitPlane,
-                      int &oSplitOffset, std::list<MapBuildData::Wall> &oPositiveSide, std::list<MapBuildData::Wall> &oNegativeSide,
-                      std::list<MapBuildData::Wall> &oWithinSplitPlane);
-    bool IsWallSetConvex(const std::list<MapBuildData::Wall> &iWalls);
+    KDBData::Error BuildSector(const Map::Data::Sector &iMapSector, KDBData::Sector &oSector);
+    KDBData::Error BuildPolygon(const Map::Data::Sector::Polygon &iPolygon, int iDesiredOrientation, std::list<KDBData::Wall> &oWalls);
+    KDBData::Error RecursiveBuildKDTree(std::list<KDBData::Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, KDTreeNode *&oKDTree);
+    void SplitWallSet(std::list<KDBData::Wall> &ioWalls, KDTreeNode::SplitPlane iSplitPlane,
+                      int &oSplitOffset, std::list<KDBData::Wall> &oPositiveSide, std::list<KDBData::Wall> &oNegativeSide,
+                      std::list<KDBData::Wall> &oWithinSplitPlane);
+    bool IsWallSetConvex(const std::list<KDBData::Wall> &iWalls);
 
 protected:
     // Inputs/outputs
@@ -36,7 +36,7 @@ protected:
     KDTreeMap *m_pKDTree;
 
     // Intermediate structure
-    std::vector<MapBuildData::Sector> m_Sectors;
+    std::vector<KDBData::Sector> m_Sectors;
 };
 
 #endif

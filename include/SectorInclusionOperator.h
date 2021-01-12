@@ -47,18 +47,18 @@ private:
 class SectorInclusionOperator
 {
 public:
-    SectorInclusionOperator(std::vector<MapBuildData::Sector> &ioSectors);
+    SectorInclusionOperator(std::vector<KDBData::Sector> &ioSectors);
     virtual ~SectorInclusionOperator();
 
 public:
-    MapBuildData::ErrorCode Run();
+    KDBData::Error Run();
     const SectorInclusions &GetResult() const { return m_Result; }
 
 protected:
     void ResetIsInsideMatrix();
 
 protected:
-    std::vector<MapBuildData::Sector> &m_Sectors;
+    std::vector<KDBData::Sector> &m_Sectors;
     std::vector<std::vector<bool>> m_IsInsideMatrix;
     SectorInclusions m_Result;
 };

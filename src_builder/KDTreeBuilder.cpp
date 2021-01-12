@@ -12,20 +12,20 @@
 #include <memory>
 #include <algorithm>
 
-MapBuildData::ErrorCode KDTreeBuilder::BuildSectors(const Map &iMap)
+KDBData::Error KDTreeBuilder::BuildSectors(const Map &iMap)
 {
     const Map::Data *pMapData = &iMap.GetData();
     for (unsigned int i = 0; i < pMapData->m_Sectors.size(); i++)
     {
-        MapBuildData::Sector sector;
+        KDBData::Sector sector;
 
-        MapBuildData::ErrorCode err = BuildSector(pMapData->m_Sectors[i], sector);
-        if (err != MapBuildData::ErrorCode::OK)
+        KDBData::Error err = BuildSector(pMapData->m_Sectors[i], sector);
+        if (err != KDBData::Error::OK)
             return err;
 
-        for (const MapBuildData::Wall &wall : sector.m_Walls)
+        for (const KDBData::Wall &wall : sector.m_Walls)
         {
-            MapBuildData::Wall &mutableWall = const_cast<MapBuildData::Wall &>(wall); // Ugly but screw this, I'm not at work
+            KDBData::Wall &mutableWall = const_cast<KDBData::Wall &>(wall); // Ugly but screw this, I'm not at work
             mutableWall.m_InSector = i;
             mutableWall.m_OutSector = -1;
         }
@@ -36,23 +36,23 @@ MapBuildData::ErrorCode KDTreeBuilder::BuildSectors(const Map &iMap)
     }
 
     
-    return MapBuildData::ErrorCode::OK;
+    return KDBData::Error::OK;
 }
 
-MapBuildData::ErrorCode KDTreeBuilder::BuildSector(const Map::Data::Sector &iMapSector, MapBuildData::Sector &oSector)
+KDBData::Error KDTreeBuilder::BuildSector(const Map::Data::Sector &iMapSector, KDBData::Sector &oSector)
 {
-    MapBuildData::ErrorCode error = MapBuildData::ErrorCode::OK;
+    KDBData::Error error = KDBData::Error::OK;
 
-    std::vector<MapBuildData::Wall> outlineWalls;
+    std::vector<KDBData::Wall> outlineWalls;
     error = BuildPolygon(iMapSector.m_Outline, 1, oSector.m_Walls);
 
-    if (error != MapBuildData::ErrorCode::OK)
+    if (error != KDBData::Error::OK)
         return error;
 
     for (unsigned int i = 0; i < iMapSector.m_Holes.size(); i++)
     {
         error = BuildPolygon(iMapSector.m_Holes[i], -1, oSector.m_Walls);
-        if (error != MapBuildData::ErrorCode::OK)
+        if (error != KDBData::Error::OK)
             break;
     }
 
@@ -60,7 +60,7 @@ MapBuildData::ErrorCode KDTreeBuilder::BuildSector(const Map::Data::Sector &iMap
 }
 
 template<typename Iterator>
-void FillWalls(Iterator iBegin, Iterator iEnd, std::list<MapBuildData::Wall> &oWalls)
+void FillWalls(Iterator iBegin, Iterator iEnd, std::list<KDBData::Wall> &oWalls)
 {
     Iterator vit(iBegin);
     Iterator vitNext;
@@ -70,33 +70,33 @@ void FillWalls(Iterator iBegin, Iterator iEnd, std::list<MapBuildData::Wall> &oW
         if(vitNext == iEnd)
             vitNext = iBegin;
 
-        MapBuildData::Wall wall;
+        KDBData::Wall wall;
         wall.m_VertexFrom = *vit;
         wall.m_VertexTo = *vitNext;
         oWalls.push_back(wall);
     }
 }
 
-MapBuildData::ErrorCode KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Polygon &iPolygon, int iDesiredOrientation, std::list<MapBuildData::Wall> &oWalls)
+KDBData::Error KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Polygon &iPolygon, int iDesiredOrientation, std::list<KDBData::Wall> &oWalls)
 {
-    MapBuildData::ErrorCode error = MapBuildData::ErrorCode::OK;
+    KDBData::Error error = KDBData::Error::OK;
 
     if(iPolygon.empty())
-        return MapBuildData::ErrorCode::INVALID_POLYGON;
+        return KDBData::Error::INVALID_POLYGON;
 
-    std::list<MapBuildData::Vertex> decimatedVertices;
-    MapBuildData::Vertex prevVertex(iPolygon[0]);
+    std::list<KDBData::Vertex> decimatedVertices;
+    KDBData::Vertex prevVertex(iPolygon[0]);
     int previousLineOrientation = 0; // 1 for horizontal line, -1 for vertical line
 
     for(unsigned int i = 0; i < iPolygon.size(); i++)
     {
-        MapBuildData::Vertex currVertex(iPolygon[(i + 1) % iPolygon.size()]);
+        KDBData::Vertex currVertex(iPolygon[(i + 1) % iPolygon.size()]);
         int deltaX = currVertex.m_X - prevVertex.m_X;
         int deltaY = currVertex.m_Y - prevVertex.m_Y;
 
         if((deltaX && deltaY) || (!deltaX && !deltaY))
         {
-            error = MapBuildData::ErrorCode::INVALID_POLYGON;
+            error = KDBData::Error::INVALID_POLYGON;
             break;
         }
 
@@ -104,7 +104,7 @@ MapBuildData::ErrorCode KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Pol
         prevVertex = currVertex;
     }
 
-    if (error != MapBuildData::ErrorCode::OK)
+    if (error != KDBData::Error::OK)
         return error;
 
     // Decimate vertices
@@ -113,9 +113,9 @@ MapBuildData::ErrorCode KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Pol
     // TODO: When textures are supported, this step will have to be performed inside
     // the inclusion solver only (we might accidentally remove information otherwise)
 
-    std::list<MapBuildData::Vertex>::iterator vit(decimatedVertices.begin());
-    std::list<MapBuildData::Vertex>::iterator vitNext;
-    std::list<MapBuildData::Vertex>::iterator vitPrev;
+    std::list<KDBData::Vertex>::iterator vit(decimatedVertices.begin());
+    std::list<KDBData::Vertex>::iterator vitNext;
+    std::list<KDBData::Vertex>::iterator vitPrev;
     while (vit != decimatedVertices.end())
     {
         vitNext = std::next(vit);
@@ -127,9 +127,9 @@ MapBuildData::ErrorCode KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Pol
         else
             vitPrev = std::prev(vit);
 
-        const MapBuildData::Vertex &vPrev = *vitPrev;
-        const MapBuildData::Vertex &vCurr = *vit;
-        const MapBuildData::Vertex &vNext = *vitNext;
+        const KDBData::Vertex &vPrev = *vitPrev;
+        const KDBData::Vertex &vCurr = *vit;
+        const KDBData::Vertex &vNext = *vitNext;
 
         if ((vPrev.m_X == vCurr.m_X && vCurr.m_X == vNext.m_X) ||
             (vPrev.m_Y == vCurr.m_Y && vCurr.m_Y == vNext.m_Y))
@@ -139,7 +139,7 @@ MapBuildData::ErrorCode KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Pol
     }
 
     if(decimatedVertices.size() < 4)
-        return MapBuildData::ErrorCode::INVALID_POLYGON;
+        return KDBData::Error::INVALID_POLYGON;
 
     vitPrev = decimatedVertices.begin();
     vit = std::next(vitPrev);
@@ -147,38 +147,38 @@ MapBuildData::ErrorCode KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Pol
 
     bool reverseIter = iDesiredOrientation * WhichSide(*vitPrev, *vit, *vitNext) < 0;
     if(reverseIter)
-        FillWalls<std::reverse_iterator<std::list<MapBuildData::Vertex>::iterator>>(decimatedVertices.rbegin(), decimatedVertices.rend(), oWalls);
+        FillWalls<std::reverse_iterator<std::list<KDBData::Vertex>::iterator>>(decimatedVertices.rbegin(), decimatedVertices.rend(), oWalls);
     else
-        FillWalls<std::list<MapBuildData::Vertex>::iterator>(decimatedVertices.begin(), decimatedVertices.end(), oWalls);
+        FillWalls<std::list<KDBData::Vertex>::iterator>(decimatedVertices.begin(), decimatedVertices.end(), oWalls);
 
     return error;
 }
 
-MapBuildData::ErrorCode KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
+KDBData::Error KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
 {
     SectorInclusionOperator inclusionOper(m_Sectors);
-    MapBuildData::ErrorCode ret = inclusionOper.Run();
+    KDBData::Error ret = inclusionOper.Run();
 
-    if (ret == MapBuildData::ErrorCode::OK)
+    if (ret == KDBData::Error::OK)
     {
-        if (ret == MapBuildData::ErrorCode::OK)
+        if (ret == KDBData::Error::OK)
         {
             // Walls are broken so no walls overlap
             // Wall breaking & in/out sector resolution is handled by WallBreakerOperator
-            std::vector<MapBuildData::Wall> allWallsToBreak;
+            std::vector<KDBData::Wall> allWallsToBreak;
             for (unsigned int i = 0; i < m_Sectors.size(); i++)
             {
-                for (const MapBuildData::Wall &wall : m_Sectors[i].m_Walls)
+                for (const KDBData::Wall &wall : m_Sectors[i].m_Walls)
                 {
                     allWallsToBreak.push_back(wall);
                 }
             }
 
-            std::vector<MapBuildData::Wall> allWalls;
+            std::vector<KDBData::Wall> allWalls;
             WallBreakerOperator wallBreakerOper(inclusionOper.GetResult());
             ret = wallBreakerOper.Run(allWallsToBreak, allWalls);
 
-            if(ret == MapBuildData::ErrorCode::OK)
+            if(ret == KDBData::Error::OK)
             {
                 oKDTree = new KDTreeMap;
 
@@ -197,7 +197,7 @@ MapBuildData::ErrorCode KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
                 }
 
                 // Damn I really suck at writing consistent code :(
-                std::list<MapBuildData::Wall> allWallsList(allWalls.begin(), allWalls.end());
+                std::list<KDBData::Wall> allWallsList(allWalls.begin(), allWalls.end());
                 allWalls.clear();
                 ret = RecursiveBuildKDTree(allWallsList, KDTreeNode::SplitPlane::XConst, oKDTree->m_RootNode);
             }
@@ -207,7 +207,7 @@ MapBuildData::ErrorCode KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
     return ret;
 }
 
-bool KDTreeBuilder::IsWallSetConvex(const std::list<MapBuildData::Wall> &iWalls)
+bool KDTreeBuilder::IsWallSetConvex(const std::list<KDBData::Wall> &iWalls)
 {
     bool isConvex = true;
 
@@ -217,7 +217,7 @@ bool KDTreeBuilder::IsWallSetConvex(const std::list<MapBuildData::Wall> &iWalls)
     // Only walls that separate the inside and the outside of the map
     // can be considered a convex set
     int inSector = iWalls.begin()->m_InSector;
-    for (const MapBuildData::Wall &wall : iWalls)
+    for (const KDBData::Wall &wall : iWalls)
     {
         if(wall.m_OutSector != -1)
             isConvex = false;
@@ -229,9 +229,9 @@ bool KDTreeBuilder::IsWallSetConvex(const std::list<MapBuildData::Wall> &iWalls)
         return false;
 
     // Compute the axis-aligned bounding box
-    MapBuildData::Vertex bboxMin = iWalls.begin()->m_VertexFrom;
-    MapBuildData::Vertex bboxMax = bboxMin;
-    for (const MapBuildData::Wall &wall : iWalls)
+    KDBData::Vertex bboxMin = iWalls.begin()->m_VertexFrom;
+    KDBData::Vertex bboxMax = bboxMin;
+    for (const KDBData::Wall &wall : iWalls)
     {
         for(unsigned int coord = 0; coord < 2; coord++)
         {
@@ -250,7 +250,7 @@ bool KDTreeBuilder::IsWallSetConvex(const std::list<MapBuildData::Wall> &iWalls)
     // Due to the X/Y-alignment property of our polygons, the only possible convex hull
     // is the axis-aligned bounding box of the input walls
     // We therefore have to check that every input wall is on the border of the bounding box
-    for (const MapBuildData::Wall &wall : iWalls)
+    for (const KDBData::Wall &wall : iWalls)
     {
         // If one wall isn't on the bbox, return false
         int constCoord = wall.GetConstCoordinate();
@@ -283,10 +283,10 @@ bool KDTreeBuilder::IsWallSetConvex(const std::list<MapBuildData::Wall> &iWalls)
     return isConvex;
 }
 
-MapBuildData::ErrorCode KDTreeBuilder::RecursiveBuildKDTree(std::list<MapBuildData::Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, KDTreeNode *&ioKDTreeNode)
+KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, KDTreeNode *&ioKDTreeNode)
 {
     if(!ioKDTreeNode)
-        return MapBuildData::ErrorCode::UNKNOWN_FAILURE;
+        return KDBData::Error::UNKNOWN_FAILURE;
 
     // No need to divide the set of wall any further
     if(IsWallSetConvex(iWalls))
@@ -294,7 +294,7 @@ MapBuildData::ErrorCode KDTreeBuilder::RecursiveBuildKDTree(std::list<MapBuildDa
         ioKDTreeNode->m_SplitPlane = KDTreeNode::SplitPlane::None;
         ioKDTreeNode->m_SplitOffset = 0; // Will never be used
 
-        for (const MapBuildData::Wall &wall : iWalls)
+        for (const KDBData::Wall &wall : iWalls)
         {
             KDMapData::Wall kdWall;
 
@@ -310,12 +310,12 @@ MapBuildData::ErrorCode KDTreeBuilder::RecursiveBuildKDTree(std::list<MapBuildDa
             ioKDTreeNode->m_Walls.push_back(kdWall);
         }
 
-        return MapBuildData::ErrorCode::OK;
+        return KDBData::Error::OK;
     }
     else
     {
         int splitOffset;
-        std::list<MapBuildData::Wall> positiveSide, negativeSide, withinPlane;
+        std::list<KDBData::Wall> positiveSide, negativeSide, withinPlane;
         SplitWallSet(iWalls, iSplitPlane, splitOffset, positiveSide, negativeSide, withinPlane);
 
         // TODO: remove?
@@ -331,7 +331,7 @@ MapBuildData::ErrorCode KDTreeBuilder::RecursiveBuildKDTree(std::list<MapBuildDa
         {
             ioKDTreeNode->m_SplitPlane = iSplitPlane;
             ioKDTreeNode->m_SplitOffset = splitOffset;
-            for (const MapBuildData::Wall &wall : withinPlane)
+            for (const KDBData::Wall &wall : withinPlane)
             {
                 KDMapData::Wall kdWall;
 
@@ -352,8 +352,8 @@ MapBuildData::ErrorCode KDTreeBuilder::RecursiveBuildKDTree(std::list<MapBuildDa
         {
             ioKDTreeNode->m_PositiveSide = new KDTreeNode;
             KDTreeNode::SplitPlane newSplitPlane = iSplitPlane == KDTreeNode::SplitPlane::XConst ? KDTreeNode::SplitPlane::YConst : KDTreeNode::SplitPlane::XConst;
-            MapBuildData::ErrorCode ret = RecursiveBuildKDTree(positiveSide, newSplitPlane, ioKDTreeNode->m_PositiveSide);
-            if (ret != MapBuildData::ErrorCode::OK)
+            KDBData::Error ret = RecursiveBuildKDTree(positiveSide, newSplitPlane, ioKDTreeNode->m_PositiveSide);
+            if (ret != KDBData::Error::OK)
                 return ret;
         }
 
@@ -361,21 +361,21 @@ MapBuildData::ErrorCode KDTreeBuilder::RecursiveBuildKDTree(std::list<MapBuildDa
         {
             ioKDTreeNode->m_NegativeSide = new KDTreeNode;
             KDTreeNode::SplitPlane newSplitPlane = iSplitPlane == KDTreeNode::SplitPlane::XConst ? KDTreeNode::SplitPlane::YConst : KDTreeNode::SplitPlane::XConst;
-            MapBuildData::ErrorCode ret = RecursiveBuildKDTree(negativeSide, newSplitPlane, ioKDTreeNode->m_NegativeSide);
-            if (ret != MapBuildData::ErrorCode::OK)
+            KDBData::Error ret = RecursiveBuildKDTree(negativeSide, newSplitPlane, ioKDTreeNode->m_NegativeSide);
+            if (ret != KDBData::Error::OK)
                 return ret;
         }
 
-        return MapBuildData::ErrorCode::OK;
+        return KDBData::Error::OK;
     }
 }
 
-void KDTreeBuilder::SplitWallSet(std::list<MapBuildData::Wall> &ioWalls, KDTreeNode::SplitPlane iSplitPlane, int &oSplitOffset, std::list<MapBuildData::Wall> &oPositiveSide, std::list<MapBuildData::Wall> &oNegativeSide, std::list<MapBuildData::Wall> &oWithinSplitPlane)
+void KDTreeBuilder::SplitWallSet(std::list<KDBData::Wall> &ioWalls, KDTreeNode::SplitPlane iSplitPlane, int &oSplitOffset, std::list<KDBData::Wall> &oPositiveSide, std::list<KDBData::Wall> &oNegativeSide, std::list<KDBData::Wall> &oWithinSplitPlane)
 {
     int splitPlaneInt = iSplitPlane == KDTreeNode::SplitPlane::XConst ? 0 : (iSplitPlane == KDTreeNode::SplitPlane::YConst ? 1 : 2);
 
-    std::vector<MapBuildData::Wall> WallsParallelToSplitPlane;
-    for (const MapBuildData::Wall &wall : ioWalls)
+    std::vector<KDBData::Wall> WallsParallelToSplitPlane;
+    for (const KDBData::Wall &wall : ioWalls)
     {
         if (wall.m_VertexFrom.GetCoord(splitPlaneInt) == wall.m_VertexTo.GetCoord(splitPlaneInt))
             WallsParallelToSplitPlane.push_back(wall);
@@ -388,7 +388,7 @@ void KDTreeBuilder::SplitWallSet(std::list<MapBuildData::Wall> &ioWalls, KDTreeN
     oSplitOffset = WallsParallelToSplitPlane[(WallsParallelToSplitPlane.size() - 1) / 2].m_VertexFrom.GetCoord(splitPlaneInt);
     WallsParallelToSplitPlane.clear();
 
-    std::list<MapBuildData::Wall>::iterator sit(ioWalls.begin());
+    std::list<KDBData::Wall>::iterator sit(ioWalls.begin());
     while(sit != ioWalls.end())
     {
         if (sit->m_VertexFrom.GetCoord(splitPlaneInt) == oSplitOffset &&
@@ -408,12 +408,12 @@ void KDTreeBuilder::SplitWallSet(std::list<MapBuildData::Wall> &ioWalls, KDTreeN
         }
         else
         {
-            MapBuildData::Vertex splitVertex;
+            KDBData::Vertex splitVertex;
             splitVertex.SetCoord(splitPlaneInt, oSplitOffset);
             splitVertex.SetCoord((splitPlaneInt + 1) % 2, sit->m_VertexFrom.GetCoord((splitPlaneInt + 1) % 2));
 
-            MapBuildData::Wall newWall1(*sit);
-            MapBuildData::Wall newWall2(*sit);
+            KDBData::Wall newWall1(*sit);
+            KDBData::Wall newWall2(*sit);
             newWall1.m_VertexTo = splitVertex;
             newWall2.m_VertexFrom = splitVertex;
 
@@ -449,12 +449,12 @@ KDTreeBuilder::~KDTreeBuilder()
 
 bool KDTreeBuilder::Build()
 {
-    bool success = BuildSectors(m_Map) == MapBuildData::ErrorCode::OK;
+    bool success = BuildSectors(m_Map) == KDBData::Error::OK;
     if(!success)
         return false;
 
-    MapBuildData::ErrorCode err = BuildKDTree(m_pKDTree);
-    if(err != MapBuildData::ErrorCode::OK || !m_pKDTree)
+    KDBData::Error err = BuildKDTree(m_pKDTree);
+    if(err != KDBData::Error::OK || !m_pKDTree)
         return false;
 
     return true;

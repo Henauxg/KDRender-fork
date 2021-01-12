@@ -3,7 +3,7 @@
 #include "KDTreeMap.h"
 #include "GeomUtils.h"
 
-int MapBuildData::Vertex::GetCoord(unsigned int i) const
+int KDBData::Vertex::GetCoord(unsigned int i) const
 {
     switch (i)
     {
@@ -16,7 +16,7 @@ int MapBuildData::Vertex::GetCoord(unsigned int i) const
     }
 }
 
-void MapBuildData::Vertex::SetCoord(unsigned int i, int iVal)
+void KDBData::Vertex::SetCoord(unsigned int i, int iVal)
 {
     switch (i)
     {
@@ -31,28 +31,28 @@ void MapBuildData::Vertex::SetCoord(unsigned int i, int iVal)
     }
 }
 
-MapBuildData::Vertex::Vertex()
+KDBData::Vertex::Vertex()
 {
 
 }
 
-MapBuildData::Vertex::Vertex(const Map::Data::Sector::Vertex &iV)
+KDBData::Vertex::Vertex(const Map::Data::Sector::Vertex &iV)
 {
     m_X = iV.m_X;
     m_Y = iV.m_Y;
 }
 
-bool MapBuildData::Wall::IsGeomEqual(const Wall &iOtherWall)
+bool KDBData::Wall::IsGeomEqual(const Wall &iOtherWall)
 {
     return this->m_VertexFrom == iOtherWall.m_VertexFrom && this->m_VertexTo == iOtherWall.m_VertexTo;
 }
 
-bool MapBuildData::Wall::IsGeomOpposite(const Wall &iOtherWall) const
+bool KDBData::Wall::IsGeomOpposite(const Wall &iOtherWall) const
 {
     return this->m_VertexFrom == iOtherWall.m_VertexTo && this->m_VertexTo == iOtherWall.m_VertexFrom;
 }
 
-unsigned int MapBuildData::Wall::GetConstCoordinate() const
+unsigned int KDBData::Wall::GetConstCoordinate() const
 {
     if (m_VertexFrom.m_X == m_VertexTo.m_X)
         return 0;
@@ -62,7 +62,7 @@ unsigned int MapBuildData::Wall::GetConstCoordinate() const
         return 2; // Invalid, should not happen
 }
 
-MapBuildData::Sector::Relationship MapBuildData::Sector::FindRelationship(const Sector &iSector2) const
+KDBData::Sector::Relationship KDBData::Sector::FindRelationship(const Sector &iSector2) const
 {
     // TODO: there are smarter ways to work out inclusion
     Relationship ret = Relationship::UNDETERMINED;
@@ -103,7 +103,7 @@ MapBuildData::Sector::Relationship MapBuildData::Sector::FindRelationship(const 
                 // Note: SegmentSegment intersection won't return true if input segments are colinear, even if they
                 // do intersect, so calling this function works here
                 Vertex intersection;
-                if (SegmentSegmentIntersection<MapBuildData::Vertex, double>(thisWall.m_VertexFrom, thisWall.m_VertexTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection) &&
+                if (SegmentSegmentIntersection<KDBData::Vertex, double>(thisWall.m_VertexFrom, thisWall.m_VertexTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection) &&
                     !(intersection == thisWall.m_VertexFrom) && !(intersection == thisWall.m_VertexTo) &&
                     !(intersection == otherWall.m_VertexFrom) && !(intersection == otherWall.m_VertexTo))
                 {
@@ -124,7 +124,7 @@ MapBuildData::Sector::Relationship MapBuildData::Sector::FindRelationship(const 
                     halfLineTo.m_Y += (50 + deltaYIntersectionLine);
 
                     Vertex intersection;
-                    if (HalfLineSegmentIntersection<MapBuildData::Vertex, double>(thisVertex, halfLineTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection))
+                    if (HalfLineSegmentIntersection<KDBData::Vertex, double>(thisVertex, halfLineTo, otherWall.m_VertexFrom, otherWall.m_VertexTo, intersection))
                     {
                         if (intersection == thisWall.m_VertexFrom || intersection == thisWall.m_VertexTo ||
                             intersection == otherWall.m_VertexFrom || intersection == otherWall.m_VertexTo)
