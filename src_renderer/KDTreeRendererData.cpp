@@ -1,0 +1,44 @@
+#include "KDTreeRendererData.h"
+
+#include <cstring>
+
+KDRData::FlatSurface::FlatSurface()
+{
+    // std::fill(m_MinY.begin(), m_MinY.end(), WINDOW_HEIGHT);
+    // std::fill(m_MaxY.begin(), m_MaxY.end(), 0);
+    for (unsigned int x = 0; x < WINDOW_WIDTH; x++)
+    {
+        m_MinY[x] = WINDOW_HEIGHT;
+        m_MaxY[x] = 0;
+    }
+}
+
+KDRData::FlatSurface::FlatSurface(const FlatSurface &iOther) : 
+    m_MinX(iOther.m_MinX),
+    m_MaxX(iOther.m_MaxX),
+    m_Height(iOther.m_Height),
+    m_SectorIdx(iOther.m_SectorIdx)
+{
+    memcpy(m_MinY, iOther.m_MinY, sizeof(int) * WINDOW_WIDTH);
+    memcpy(m_MaxY, iOther.m_MaxY, sizeof(int) * WINDOW_WIDTH);
+}
+
+bool KDRData::FlatSurface::Absorb(const FlatSurface &iOther)
+{
+    if (iOther.m_Height != m_Height || iOther.m_SectorIdx != m_SectorIdx)
+        return false;
+
+    if (iOther.m_MinX >= m_MinX && iOther.m_MinX <= m_MaxX)
+        return false;
+
+    if (iOther.m_MaxX >= m_MinX && iOther.m_MinX <= m_MaxX)
+        return false;
+
+    memcpy(m_MinY + iOther.m_MinX, iOther.m_MinY + iOther.m_MinX, (iOther.m_MaxX - iOther.m_MinX + 1) * sizeof(int));
+    memcpy(m_MaxY + iOther.m_MinX, iOther.m_MaxY + iOther.m_MinX, (iOther.m_MaxX - iOther.m_MinX + 1) * sizeof(int));
+
+    m_MinX = std::min(iOther.m_MinX, m_MinX);
+    m_MaxX = std::max(iOther.m_MaxX, m_MaxX);
+
+    return true;
+}

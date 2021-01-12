@@ -51,8 +51,8 @@ int main(int argc, char **argv)
     }
 
     KDTreeRenderer renderer(map);
-    
-    KDTreeRenderer::Vertex playerPos;
+
+    KDRData::Vertex playerPos;
     playerPos.m_X = map.GetPlayerStartX();
     playerPos.m_Y = map.GetPlayerStartY();
 
@@ -193,8 +193,8 @@ int main(int argc, char **argv)
         // if(dPos > 0)
         //     std::cout << "dPos = " << dPos << std::endl;
 
-        KDTreeRenderer::Vertex look(renderer.GetLook());
-        
+        KDRData::Vertex look(renderer.GetLook());
+
         CType dx = dPos * (look.m_X - playerPos.m_X);
         CType dy = dPos * (look.m_Y - playerPos.m_Y);
 

@@ -8,22 +8,22 @@
 
 namespace
 {
-    KDTreeRenderer::Wall GetWallFromNode(KDTreeNode *ipNode, unsigned int iWallIdx)
+    KDRData::Wall GetWallFromNode(KDTreeNode *ipNode, unsigned int iWallIdx)
     {
-        KDTreeRenderer::Wall wall;
+        KDRData::Wall wall;
 
         if(ipNode)
         {
-            wall = ipNode->BuildXYScaledWall<KDTreeRenderer::Wall>(iWallIdx);
+            wall = ipNode->BuildXYScaledWall<KDRData::Wall>(iWallIdx);
             wall.m_pKDWall = ipNode->GetWall(iWallIdx);
         }
 
         return wall;
     }
 
-    KDTreeRenderer::Sector GetSectorFromKDSector(const KDMapData::Sector &iSector)
+    KDRData::Sector GetSectorFromKDSector(const KDMapData::Sector &iSector)
     {
-        KDTreeRenderer::Sector sector;
+        KDRData::Sector sector;
 
         sector.m_pKDSector = &iSector;
         sector.m_Ceiling = CType(iSector.ceiling) / POSITION_SCALE;
@@ -113,7 +113,7 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
 
     for (unsigned int i = 0; i < pNode->m_Walls.size(); i++)
     {
-        KDTreeRenderer::Wall wall(GetWallFromNode(pNode, i));
+        KDRData::Wall wall(GetWallFromNode(pNode, i));
 
         bool vertexFromIsBehindPlayer = DotProduct(m_PlayerPosition, m_Look, m_PlayerPosition, wall.m_VertexFrom) <= 0;
         bool vertexToIsBehindPlayer = DotProduct(m_PlayerPosition, m_Look, m_PlayerPosition, wall.m_VertexTo) <= 0;
@@ -131,28 +131,27 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
         {
             // Clip against frustum
             int minAngle = m_PlayerHorizontalFOV / 2, maxAngle = -m_PlayerHorizontalFOV / 2;
-            Vertex minVertex, maxVertex;
+            KDRData::Vertex minVertex, maxVertex;
 
             bool vertexFromInsideFrustum = isInsideFrustum(wall.m_VertexFrom);
             bool vertexToInsideFrustum = isInsideFrustum(wall.m_VertexTo);
 
             if (!vertexFromInsideFrustum || !vertexToInsideFrustum)
             {
-                Vertex intersectionVertex;
-                if (HalfLineSegmentIntersection<Vertex>(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
+                KDRData::Vertex intersectionVertex;
+                if (HalfLineSegmentIntersection<KDRData::Vertex>(m_PlayerPosition, m_FrustumToLeft, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
                 {
                     minVertex = intersectionVertex;
                     minAngle = -m_PlayerHorizontalFOV / 2;
                 }
-                if (HalfLineSegmentIntersection<Vertex>(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
+                if (HalfLineSegmentIntersection<KDRData::Vertex>(m_PlayerPosition, m_FrustumToRight, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
                 {
                     maxVertex = intersectionVertex;
                     maxAngle = m_PlayerHorizontalFOV / 2;
                 }
             }
 
-            auto updateMinMaxAnglesAndVertices = [&](int iAngle, const Vertex &iVertex)
-            {
+            auto updateMinMaxAnglesAndVertices = [&](int iAngle, const KDRData::Vertex &iVertex) {
                 if (iAngle < minAngle)
                 {
                     minAngle = iAngle;
@@ -189,7 +188,7 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
         RenderNode(pNode->m_PositiveSide);
 }
 
-void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, const Vertex &iMaxVertex, int iMinAngle, int iMaxAngle)
+void KDTreeRenderer::RenderWall(const KDRData::Wall &iWall, const KDRData::Vertex &iMinVertex, const KDRData::Vertex &iMaxVertex, int iMinAngle, int iMaxAngle)
 {
     // TODO: there has to be (multiple) way(s) to refactor this harder
 
@@ -238,10 +237,10 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     int whichSide = WhichSide(iWall.m_VertexFrom, iWall.m_VertexTo, m_PlayerPosition);
 
     int inSectorIdx = iWall.m_pKDWall->m_InSector;
-    const Sector &inSector = GetSectorFromKDSector(m_Map.m_Sectors[inSectorIdx]);
+    const KDRData::Sector &inSector = GetSectorFromKDSector(m_Map.m_Sectors[inSectorIdx]);
 
     int outSectorIdx = iWall.m_pKDWall->m_OutSector;
-    const Sector &outSector = GetSectorFromKDSector(m_Map.m_Sectors[outSectorIdx]);
+    const KDRData::Sector &outSector = GetSectorFromKDSector(m_Map.m_Sectors[outSectorIdx]);
 
     int minVertexColor = ((m_MaxColorInterpolationDist - minDist) * maxColorRange) / m_MaxColorInterpolationDist;
     int maxVertexColor = ((m_MaxColorInterpolationDist - maxDist) * maxColorRange) / m_MaxColorInterpolationDist;
@@ -276,13 +275,13 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
         int maxVertexBottomPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * tanInt(maxAngleEyeToBottom) * m_VerticalDistortionCst;
         int maxVertexTopPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * tanInt(maxAngleEyeToTop) * m_VerticalDistortionCst;
 
-        FlatSurface floorSurface;
+        KDRData::FlatSurface floorSurface;
         floorSurface.m_MinX = minX;
         floorSurface.m_MaxX = maxX;
         floorSurface.m_SectorIdx = inSectorIdx;
         floorSurface.m_Height = inSector.m_Floor;
 
-        FlatSurface ceilingSurface(floorSurface);
+        KDRData::FlatSurface ceilingSurface(floorSurface);
         ceilingSurface.m_Height = inSector.m_Ceiling;
 
         bool addFloorSurface = false;
@@ -347,7 +346,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                 int maxVertexBottomPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * tanInt(maxAngleEyeToBottomFloor) * m_VerticalDistortionCst;
                 int maxVertexTopPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * tanInt(maxAngleEyeToTopFloor) * m_VerticalDistortionCst;
 
-                FlatSurface floorSurface;
+                KDRData::FlatSurface floorSurface;
                 floorSurface.m_MinX = minX;
                 floorSurface.m_MaxX = maxX;
                 floorSurface.m_SectorIdx = whichSide > 0 ? inSectorIdx : outSectorIdx;
@@ -412,7 +411,7 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
                 int maxVertexBottomPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * tanInt(maxAngleEyeToBottomCeiling) * m_VerticalDistortionCst;
                 int maxVertexTopPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * tanInt(maxAngleEyeToTopCeiling) * m_VerticalDistortionCst;
 
-                FlatSurface ceilingSurface;
+                KDRData::FlatSurface ceilingSurface;
                 ceilingSurface.m_MinX = minX;
                 ceilingSurface.m_MaxX = maxX;
                 ceilingSurface.m_SectorIdx = whichSide > 0 ? inSectorIdx : outSectorIdx;
@@ -466,12 +465,12 @@ void KDTreeRenderer::RenderWall(const Wall &iWall, const Vertex &iMinVertex, con
     }
 }
 
-bool KDTreeRenderer::AddFlatSurface(const FlatSurface &iFlatSurface)
+bool KDTreeRenderer::AddFlatSurface(const KDRData::FlatSurface &iFlatSurface)
 {
     bool hasBeenAbsorbed = false;
     for(auto &k : m_FlatSurfaces)
     {
-        for (FlatSurface &flatSurface : k.second)
+        for (KDRData::FlatSurface &flatSurface : k.second)
         {
             if (flatSurface.Absorb(iFlatSurface))
                 hasBeenAbsorbed = true;
@@ -490,11 +489,11 @@ void KDTreeRenderer::RenderFlatSurfacesLegacy()
 
     for(const auto &keyVal : m_FlatSurfaces)
     {
-        const std::vector<FlatSurface> &currentSurfaces = keyVal.second;
+        const std::vector<KDRData::FlatSurface> &currentSurfaces = keyVal.second;
 
         for (unsigned int i = 0; i < currentSurfaces.size(); i++)
         {
-            const FlatSurface &currentSurface = currentSurfaces[i];
+            const KDRData::FlatSurface &currentSurface = currentSurfaces[i];
 
             char r = currentSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
             char g = currentSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
@@ -555,14 +554,14 @@ void KDTreeRenderer::RenderFlatSurfaces()
     for(const auto &keyVal : m_FlatSurfaces)
     {
         const CType currentHeight = keyVal.first;
-        const std::vector<FlatSurface> &currentSurfaces = keyVal.second;
+        const std::vector<KDRData::FlatSurface> &currentSurfaces = keyVal.second;
 
         for(unsigned int i = 0; i < WINDOW_HEIGHT; i++)
             m_DistYCache[i] = -1;
 
         for (unsigned int i = 0; i < currentSurfaces.size(); i++)
         {
-            const FlatSurface &currentSurface = currentSurfaces[i];
+            const KDRData::FlatSurface &currentSurface = currentSurfaces[i];
 
             char r = currentSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
             char g = currentSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
@@ -703,14 +702,14 @@ CType KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
         if(pNode->GetNbOfWalls()) // Should always be true
         {
             oZ = m_PlayerHeight;
-            Wall wall(GetWallFromNode(pNode, 0));
+            KDRData::Wall wall(GetWallFromNode(pNode, 0));
             int whichSide = WhichSide(wall.m_VertexFrom, wall.m_VertexTo, m_PlayerPosition);
             if(whichSide < 0)
             {
                 int outSectorIdx = wall.m_pKDWall->m_OutSector;
                 if (outSectorIdx >= 0)
                 {
-                    Sector outSector = GetSectorFromKDSector(m_Map.m_Sectors[outSectorIdx]);
+                    KDRData::Sector outSector = GetSectorFromKDSector(m_Map.m_Sectors[outSectorIdx]);
                     oZ += outSector.m_Floor;
                     oZ = Clamp(oZ, outSector.m_Floor, outSector.m_Ceiling);
                 }
@@ -720,7 +719,7 @@ CType KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
                 int inSectorIdx = wall.m_pKDWall->m_InSector;
                 if (inSectorIdx >= 0)
                 {
-                    Sector inSector = GetSectorFromKDSector(m_Map.m_Sectors[inSectorIdx]);
+                    KDRData::Sector inSector = GetSectorFromKDSector(m_Map.m_Sectors[inSectorIdx]);
                     oZ += inSector.m_Floor;
                     oZ = Clamp(oZ, inSector.m_Floor, inSector.m_Ceiling);
                 }
@@ -739,13 +738,13 @@ CType KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
     return oZ;
 }
 
-bool KDTreeRenderer::isInsideFrustum(const Vertex &iVertex) const
+bool KDTreeRenderer::isInsideFrustum(const KDRData::Vertex &iVertex) const
 {
     return (WhichSide(m_PlayerPosition, m_FrustumToLeft, iVertex) >= 0) &&
            (WhichSide(m_PlayerPosition, m_FrustumToRight, iVertex) <= 0);
 }
 
-void KDTreeRenderer::SetPlayerCoordinates(const KDTreeRenderer::Vertex &iPosition, int iDirection)
+void KDTreeRenderer::SetPlayerCoordinates(const KDRData::Vertex &iPosition, int iDirection)
 {
     m_PlayerPosition = iPosition;
     m_PlayerDirection = iDirection;
@@ -755,7 +754,7 @@ void KDTreeRenderer::SetPlayerCoordinates(const KDTreeRenderer::Vertex &iPositio
     GetVector(m_PlayerPosition, m_PlayerDirection, m_Look);
 }
 
-KDTreeRenderer::Vertex KDTreeRenderer::GetPlayerPosition() const
+KDRData::Vertex KDTreeRenderer::GetPlayerPosition() const
 {
     return m_PlayerPosition;
 }
@@ -765,7 +764,7 @@ int KDTreeRenderer::GetPlayerDirection() const
     return m_PlayerDirection;
 }
 
-KDTreeRenderer::Vertex KDTreeRenderer::GetLook() const
+KDRData::Vertex KDTreeRenderer::GetLook() const
 {
     return m_Look;
 }
