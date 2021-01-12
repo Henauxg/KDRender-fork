@@ -92,7 +92,7 @@ protected:
     KDTreeNode *m_NegativeSide;
 
 private:
-    friend class MapBuildData;
+    friend class KDTreeBuilder;
     friend class KDTreeRenderer;
 };
 
@@ -126,7 +126,7 @@ protected:
     int m_PlayerStartDirection;
 
 private:
-    friend class MapBuildData;
+    friend class KDTreeBuilder;
     friend class KDTreeRenderer;
 };
 

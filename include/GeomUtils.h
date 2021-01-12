@@ -9,7 +9,7 @@
 #include "FP32.h"
 
 template<typename Vertex>
-int WhichSide(const Vertex &iV1, const Vertex &iV2, const Vertex &iP)
+inline int WhichSide(const Vertex &iV1, const Vertex &iV2, const Vertex &iP)
 {
     CType normalX = iV2.m_Y - iV1.m_Y;
     CType normalY = iV1.m_X - iV2.m_X;
@@ -23,7 +23,7 @@ int WhichSide(const Vertex &iV1, const Vertex &iV2, const Vertex &iP)
         return 1;
 }
 
-CType cosInt(int iAngle)
+inline CType cosInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
@@ -32,7 +32,7 @@ CType cosInt(int iAngle)
     return static_cast<CType>(res);
 }
 
-CType sinInt(int iAngle)
+inline CType sinInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
@@ -41,7 +41,7 @@ CType sinInt(int iAngle)
     return static_cast<CType>(res);
 }
 
-CType tanInt(int iAngle)
+inline CType tanInt(int iAngle)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
@@ -50,7 +50,7 @@ CType tanInt(int iAngle)
     return static_cast<CType>(res);
 }
 
-int atanInt(CType iX)
+inline int atanInt(CType iX)
 {
     // Extremely non-optimized
     // TODO: implement lookup table
@@ -59,8 +59,8 @@ int atanInt(CType iX)
     return static_cast<int>(atanVal);
 }
 
-template<typename Vertex>
-void GetVector(const Vertex &iOrigin, int iDirection, Vertex &oTo)
+template <typename Vertex>
+inline void GetVector(const Vertex &iOrigin, int iDirection, Vertex &oTo)
 {
     CType cosDirMult = cosInt(iDirection);
     CType sinDirMult = sinInt(iDirection);
@@ -70,13 +70,13 @@ void GetVector(const Vertex &iOrigin, int iDirection, Vertex &oTo)
 }
 
 template <typename Vertex>
-CType DotProduct(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3)
+inline CType DotProduct(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3)
 {
     return (v1.m_X - v0.m_X) * (v3.m_X - v2.m_X) + (v1.m_Y - v0.m_Y) * (v3.m_Y - v2.m_Y);
 }
 
 template <typename Vertex>
-CType Det(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3)
+inline CType Det(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3)
 {
     return (v1.m_X - v0.m_X) * (v3.m_Y - v2.m_Y) - (v1.m_Y - v0.m_Y) * (v3.m_X - v2.m_X);
 }
@@ -107,19 +107,19 @@ CType Det(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3
 // }
 
 template <typename Vertex>
-CType SquareDist(const Vertex &iV1, const Vertex &iV2)
+inline CType SquareDist(const Vertex &iV1, const Vertex &iV2)
 {
     return (iV2.m_X - iV1.m_X) * (iV2.m_X - iV1.m_X) + (iV2.m_Y - iV1.m_Y) * (iV2.m_Y - iV1.m_Y);
 }
 
 template <typename Vertex>
-CType DistInt(const Vertex &iV1, const Vertex &iV2)
+inline CType DistInt(const Vertex &iV1, const Vertex &iV2)
 {
     return std::sqrt(static_cast<float>(SquareDist(iV1, iV2)));
 }
 
 template <typename Vertex>
-int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
+inline int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
 {
     CType dot = DotProduct(iFrom, iTo1, iFrom, iTo2);
     CType det = Det(iFrom, iTo1, iFrom, iTo2);
@@ -135,7 +135,7 @@ int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
 // TODO: raised default precision to 64-bit integers, which kind of sucks. Won't need to
 // to this anymore when we finally implement a clean fixed-point arithmetic API
 template <typename Vertex, typename Intermediate = CType>
-bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
+inline bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
 {
     // Store the values for fast access and easy
     // equations-to-code conversion
@@ -161,7 +161,7 @@ bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV
 // Really dirty, just wanted to try this out
 // TODO: code a real intersection solver
 template <typename Vertex, typename Intermediate = CType>
-bool HalfLineSegmentIntersection(const Vertex &iHalfLineFrom, const Vertex &iHalfLineTo, const Vertex &iV1, const Vertex &iV2, Vertex &oIntersection)
+inline bool HalfLineSegmentIntersection(const Vertex &iHalfLineFrom, const Vertex &iHalfLineTo, const Vertex &iV1, const Vertex &iV2, Vertex &oIntersection)
 {
     if (!LineLineIntersection<Vertex, Intermediate>(iHalfLineFrom, iHalfLineTo, iV1, iV2, oIntersection))
         return false;
@@ -183,7 +183,7 @@ bool HalfLineSegmentIntersection(const Vertex &iHalfLineFrom, const Vertex &iHal
 // As shitty as above
 // TODO: code a real intersection solver
 template <typename Vertex, typename Intermediate = CType>
-bool SegmentSegmentIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
+inline bool SegmentSegmentIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
 {
     if (!LineLineIntersection<Vertex, Intermediate>(iV1, iV2, iV3, iV4, oIntersection))
         return false;
@@ -206,7 +206,7 @@ bool SegmentSegmentIntersection(const Vertex &iV1, const Vertex &iV2, const Vert
 }
 
 template <typename Vertex>
-bool VertexOnXYAlignedSegment(Vertex iV1, Vertex iV2, const Vertex &iPoint)
+inline bool VertexOnXYAlignedSegment(Vertex iV1, Vertex iV2, const Vertex &iPoint)
 {
     if (iV1.m_X == iV2.m_X && iPoint.m_X == iV1.m_X)
     {
@@ -225,7 +225,7 @@ bool VertexOnXYAlignedSegment(Vertex iV1, Vertex iV2, const Vertex &iPoint)
 }
 
 template <typename Number>
-Number Clamp(Number iVal, Number iMin, Number iMax)
+inline Number Clamp(Number iVal, Number iMin, Number iMax)
 {
     return (iVal < iMin ? iMin : (iVal > iMax ? iMax : iVal));
 }
