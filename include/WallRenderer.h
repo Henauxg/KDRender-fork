@@ -46,30 +46,30 @@ protected:
 
 protected:
     // Intermediate computations results
-    KDRData::Vertex minVertex;
-    KDRData::Vertex maxVertex;
+    KDRData::Vertex m_MinVertex;
+    KDRData::Vertex m_MaxVertex;
 
-    int minAngle;
-    int maxAngle;
+    int m_MinAngle;
+    int m_MaxAngle;
 
-    int minX;
-    int maxX;
-    CType InvMinMaxXRange;
+    int m_MinX;
+    int m_maxX;
+    CType m_InvMinMaxXRange;
 
-    CType minDist;
-    CType maxDist;
+    CType m_MinDist;
+    CType m_MaxDist;
 
-    int maxColorRange;
-    int minColorClamp;
-    int minVertexColor;
-    int maxVertexColor;
+    int m_MaxColorRange;
+    int m_MinColorClamp;
+    int m_MinVertexColor;
+    int m_MaxVertexColor;
 
-    int whichSide;
+    int m_WhichSide;
 
-    int inSectorIdx;
-    KDRData::Sector inSector;
-    int outSectorIdx;
-    KDRData::Sector outSector;
+    int m_InSectorIdx;
+    KDRData::Sector m_InSector;
+    int m_OutSectorIdx;
+    KDRData::Sector m_OutSector;
 
 protected:
     // Debug only
