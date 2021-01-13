@@ -23,11 +23,10 @@ KDBData::Error KDTreeBuilder::BuildSectors(const Map &iMap)
         if (err != KDBData::Error::OK)
             return err;
 
-        for (const KDBData::Wall &wall : sector.m_Walls)
+        for (KDBData::Wall &wall : sector.m_Walls)
         {
-            KDBData::Wall &mutableWall = const_cast<KDBData::Wall &>(wall); // Ugly but screw this, I'm not at work
-            mutableWall.m_InSector = i;
-            mutableWall.m_OutSector = -1;
+            wall.m_InSector = i;
+            wall.m_OutSector = -1;
         }
         sector.m_Ceiling = pMapData->m_Sectors[i].m_Ceiling;
         sector.m_Floor = pMapData->m_Sectors[i].m_Floor;
@@ -116,27 +115,27 @@ KDBData::Error KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Polygon &iPo
     std::list<KDBData::Vertex>::iterator vit(decimatedVertices.begin());
     std::list<KDBData::Vertex>::iterator vitNext;
     std::list<KDBData::Vertex>::iterator vitPrev;
-    while (vit != decimatedVertices.end())
-    {
-        vitNext = std::next(vit);
-        if(vitNext == decimatedVertices.end())
-            vitNext = decimatedVertices.begin();
+    // while (vit != decimatedVertices.end())
+    // {
+    //     vitNext = std::next(vit);
+    //     if(vitNext == decimatedVertices.end())
+    //         vitNext = decimatedVertices.begin();
 
-        if(vit == decimatedVertices.begin())
-            vitPrev = std::prev(decimatedVertices.end());
-        else
-            vitPrev = std::prev(vit);
+    //     if(vit == decimatedVertices.begin())
+    //         vitPrev = std::prev(decimatedVertices.end());
+    //     else
+    //         vitPrev = std::prev(vit);
 
-        const KDBData::Vertex &vPrev = *vitPrev;
-        const KDBData::Vertex &vCurr = *vit;
-        const KDBData::Vertex &vNext = *vitNext;
+    //     const KDBData::Vertex &vPrev = *vitPrev;
+    //     const KDBData::Vertex &vCurr = *vit;
+    //     const KDBData::Vertex &vNext = *vitNext;
 
-        if ((vPrev.m_X == vCurr.m_X && vCurr.m_X == vNext.m_X) ||
-            (vPrev.m_Y == vCurr.m_Y && vCurr.m_Y == vNext.m_Y))
-            vit = decimatedVertices.erase(vit);
-        else
-            vit++;
-    }
+    //     if ((vPrev.m_X == vCurr.m_X && vCurr.m_X == vNext.m_X) ||
+    //         (vPrev.m_Y == vCurr.m_Y && vCurr.m_Y == vNext.m_Y))
+    //         vit = decimatedVertices.erase(vit);
+    //     else
+    //         vit++;
+    // }
 
     if(decimatedVertices.size() < 4)
         return KDBData::Error::INVALID_POLYGON;

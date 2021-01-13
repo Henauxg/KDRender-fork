@@ -2,7 +2,7 @@
 
 #include "GeomUtils.h"
 
-FlatSurfacesRenderer::FlatSurfacesRenderer(const std::unordered_map<int, std::vector<KDRData::FlatSurface>> &iFlatSurfaces, const KDRData::State &iState, const KDRData::Settings &iSettings):
+FlatSurfacesRenderer::FlatSurfacesRenderer(const std::map<CType, std::vector<KDRData::FlatSurface>> &iFlatSurfaces, const KDRData::State &iState, const KDRData::Settings &iSettings):
     m_FlatSurfaces(iFlatSurfaces),
     m_State(iState),
     m_Settings(iSettings)
@@ -181,9 +181,9 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
 {
     int maxColorRange = 150;
 
-    char r = iSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
-    char g = iSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
-    char b = iSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
+    char r = 1;  // iSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
+    char g = 1; // iSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
+    char b = 1; // iSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
 
     CType dist = -1;
     int color;

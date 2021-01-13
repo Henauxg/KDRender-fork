@@ -7,7 +7,7 @@
 
 #include <vector>
 #include <array>
-#include <unordered_map>
+#include <map>
 #include <cstring>
 #include <algorithm>
 
@@ -50,10 +50,9 @@ protected:
     unsigned char m_pHorizOcclusionBuffer[WINDOW_WIDTH];
     int m_pTopOcclusionBuffer[WINDOW_WIDTH];
     int m_pBottomOcclusionBuffer[WINDOW_WIDTH];
-    
-    std::unordered_map<int, std::vector<KDRData::FlatSurface>> m_FlatSurfaces; // Flat surfaces are stored int the map according to their height
 
-    
+    std::map<CType, std::vector<KDRData::FlatSurface>> m_FlatSurfaces; // Flat surfaces are stored int the map according to their height
+
     KDRData::State m_State;
     KDRData::Settings m_Settings;
 };

@@ -20,6 +20,11 @@ public:
             {
                 int m_X;
                 int m_Y;
+
+                // Convention: texture informations are stored on the first vertex of the wall
+                int m_TexId;
+                int m_TexUOffset;
+                int m_TexVOffset;
             };
 
             using Polygon = std::vector<Vertex>;

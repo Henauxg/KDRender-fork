@@ -57,8 +57,10 @@ namespace KDBData
                 return iLeft.m_VertexTo < iRight.m_VertexTo;
             else if (iLeft.m_InSector != iRight.m_InSector)
                 return iLeft.m_InSector < iRight.m_InSector;
-            else
+            else if (iLeft.m_OutSector != iRight.m_OutSector)
                 return iLeft.m_OutSector < iRight.m_OutSector;
+            else // Should normally be useless
+                return iLeft.m_TexId < iRight.m_TexId;
         }
 
         bool IsGeomEqual(const Wall &iOtherWall);
@@ -68,6 +70,10 @@ namespace KDBData
 
         int m_InSector;
         int m_OutSector;
+
+        int m_TexId;
+        int m_TexUOffset;
+        int m_TexVOffset;
     };
 
     struct Sector

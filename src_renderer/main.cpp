@@ -181,7 +181,7 @@ int main(int argc, char **argv)
         //     deltaT += (float)(clock.getElapsedTime().asMilliseconds());
         // }
 
-        std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+        // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
 
         CType dPos = ((directionFront + directionBack) * dr * static_cast<CType>(deltaT)) / 1000;
         CType dPosOrtho = ((directionStrafeLeft + directionStrafeRight) * dr * static_cast<CType>(deltaT)) / 1000;

@@ -4,12 +4,12 @@
 #include "KDTreeRendererData.h"
 
 #include <vector>
-#include <unordered_map>
+#include <map>
 
 class FlatSurfacesRenderer
 {
 public:
-    FlatSurfacesRenderer(const std::unordered_map<int, std::vector<KDRData::FlatSurface>> &iFlatSurfaces, const KDRData::State &iState, const KDRData::Settings &iSettings);
+    FlatSurfacesRenderer(const std::map<CType, std::vector<KDRData::FlatSurface>> &iFlatSurfaces, const KDRData::State &iState, const KDRData::Settings &iSettings);
     virtual ~FlatSurfacesRenderer();
 
 public:
@@ -24,7 +24,7 @@ protected:
     inline void WriteFrameBuffer(unsigned int idx, unsigned char r, unsigned char g, unsigned char b);
 
 protected:
-    const std::unordered_map<int, std::vector<KDRData::FlatSurface>> &m_FlatSurfaces;
+    const std::map<CType, std::vector<KDRData::FlatSurface>> &m_FlatSurfaces;
     const KDRData::State &m_State;
     const KDRData::Settings &m_Settings;
 
@@ -33,6 +33,7 @@ protected:
     int *m_pTopOcclusionBuffer;
     int *m_pBottomOcclusionBuffer;
 
+// Cache
     int m_LinesXStart[WINDOW_HEIGHT];
     CType m_DistYCache[WINDOW_HEIGHT];
 };

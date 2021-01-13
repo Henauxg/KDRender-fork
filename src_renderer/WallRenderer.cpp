@@ -12,9 +12,9 @@ WallRenderer::WallRenderer(KDRData::Wall &iWall, const KDRData::State &iState, c
     m_Map(iMap)
 {
     // For debug purposes
-    r = iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
-    g = iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
-    b = iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
+    r = 1; // iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
+    g = 1; // iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
+    b = 1; // iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
 }
 
 WallRenderer::~WallRenderer()

@@ -42,6 +42,9 @@ namespace
             Map::Data::Sector::Vertex vertex;
             vertex.m_X = boost::fusion::at_c<0>(iPosition);
             vertex.m_Y = boost::fusion::at_c<1>(iPosition);
+            vertex.m_TexId = -1;
+            vertex.m_TexUOffset = 0;
+            vertex.m_TexVOffset = 0;
             m_Data.m_Sectors.back().m_Outline.push_back(vertex);
         }
 
@@ -55,6 +58,9 @@ namespace
             Map::Data::Sector::Vertex vertex;
             vertex.m_X = boost::fusion::at_c<0>(iPosition);
             vertex.m_Y = boost::fusion::at_c<1>(iPosition);
+            vertex.m_TexId = -1;
+            vertex.m_TexUOffset = 0;
+            vertex.m_TexVOffset = 0;
             m_Data.m_Sectors.back().m_Holes.back().push_back(vertex);
         }
 

@@ -32,6 +32,11 @@ namespace KDMapData
     public:
         int m_InSector;
         int m_OutSector;
+
+    public:
+        int m_TexId;
+        int m_TexUOffset;
+        int m_TexVOffset;
     };
 }
 
