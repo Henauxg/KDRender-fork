@@ -42,3 +42,27 @@ bool KDRData::FlatSurface::Absorb(const FlatSurface &iOther)
 
     return true;
 }
+
+KDRData::Wall KDRData::GetWallFromNode(KDTreeNode *ipNode, unsigned int iWallIdx)
+{
+    KDRData::Wall wall;
+
+    if (ipNode)
+    {
+        wall = ipNode->BuildXYScaledWall<KDRData::Wall>(iWallIdx);
+        wall.m_pKDWall = ipNode->GetWall(iWallIdx);
+    }
+
+    return wall;
+}
+
+KDRData::Sector KDRData::GetSectorFromKDSector(const KDMapData::Sector &iSector)
+{
+    KDRData::Sector sector;
+
+    sector.m_pKDSector = &iSector;
+    sector.m_Ceiling = CType(iSector.ceiling) / POSITION_SCALE;
+    sector.m_Floor = CType(iSector.floor) / POSITION_SCALE;
+
+    return sector;
+}

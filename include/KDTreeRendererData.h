@@ -50,6 +50,29 @@ namespace KDRData
         CType m_Height;
         int m_SectorIdx;
     };
-}
+
+    struct Settings
+    {
+        int m_PlayerHorizontalFOV;
+        int m_PlayerVerticalFOV;
+        CType m_PlayerHeight;
+        CType m_MaxColorInterpolationDist;
+        CType m_HorizontalDistortionCst;
+        CType m_VerticalDistortionCst;
+    };
+
+    struct State
+    {
+        KDRData::Vertex m_PlayerPosition;
+        CType m_PlayerZ;
+        int m_PlayerDirection;
+        KDRData::Vertex m_FrustumToLeft;
+        KDRData::Vertex m_FrustumToRight;
+        KDRData::Vertex m_Look;
+    };
+
+    Wall GetWallFromNode(KDTreeNode *ipNode, unsigned int iWallIdx);
+    Sector GetSectorFromKDSector(const KDMapData::Sector &iSector);
+} // namespace KDRData
 
 #endif
