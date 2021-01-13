@@ -41,7 +41,6 @@ protected:
     void Render();
     void RenderNode(KDTreeNode *pNode);
     bool AddFlatSurface(const KDRData::FlatSurface &iFlatSurface);
-    void RenderFlatSurfacesLegacy();
     void RenderFlatSurfaces();
 
 protected:
@@ -52,10 +51,7 @@ protected:
     int m_pTopOcclusionBuffer[WINDOW_WIDTH];
     int m_pBottomOcclusionBuffer[WINDOW_WIDTH];
     
-    // Data used to render floors and ceilings
     std::unordered_map<int, std::vector<KDRData::FlatSurface>> m_FlatSurfaces; // Flat surfaces are stored int the map according to their height
-    int m_LinesXStart[WINDOW_HEIGHT];
-    CType m_DistYCache[WINDOW_HEIGHT];
 
     
     KDRData::State m_State;
