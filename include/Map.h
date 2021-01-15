@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <map>
 
 class Map
 {
@@ -35,6 +36,12 @@ public:
             int m_Ceiling;
         };
 
+        struct Texture
+        {
+            std::string m_Path;
+        };
+
+        std::vector<Texture> m_Textures;
         std::vector<Sector> m_Sectors;
         std::pair<int, int> m_PlayerStartPosition;
         int m_PlayerStartDirection;

@@ -7,12 +7,21 @@ player
     }
 }
 
+texture
+{
+    name {Bricks}
+    path {maps/textures/bricks.png}
+}
+
 sector
 {
     outline
     {
-        vertices {{0, 0} {0, 100} {100, 100} {100, 0} {300, 0} {300, -300} {100, -300} 
-        {100, -350} {250, -350} {250, -400} {0, -400} {0, -300} {-200, -300} {-200, 0}}
+        vertices {
+        {0, 0 {{Bricks} {6, 9}}}
+        {0, 100} {100, 100} {100, 0} {300, 0} {300, -300} {100, -300} 
+        {100, -350} {250, -350} {250, -400} {0, -400} {0, -300} {-200, -300} {-200, 0}
+        }
     }
 
     elevation
@@ -20,6 +29,8 @@ sector
         ceiling {140}
         floor {15}
     }
+    
+    defaultWallTexture {Bricks}
 }
 
 sector

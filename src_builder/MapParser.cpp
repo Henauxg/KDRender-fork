@@ -13,7 +13,8 @@ namespace
     {
     public:
         ExpressionAccumulator(Map::Data &oData):
-            m_Data(oData)
+            m_Data(oData),
+            m_CurrentSectorDefaultWallTexId(-1)
         {
         }
         
@@ -27,6 +28,42 @@ namespace
             m_Data.m_Sectors.push_back(Map::Data::Sector());
         }
 
+        void EndNewSector()
+        {
+            if(!m_CurrentSectorDefaultWallTexId != -1)
+            {
+                Map::Data::Sector &sector = m_Data.m_Sectors.back();
+
+                for (unsigned int i = 0; i < sector.m_Outline.size(); i++)
+                {
+                    Map::Data::Sector::Vertex &vertex = sector.m_Outline[i];
+                    if(vertex.m_TexId == -1)
+                        vertex.m_TexId = m_CurrentSectorDefaultWallTexId;
+                }
+
+                for (unsigned int j = 0; j < sector.m_Holes.size(); j++)
+                {
+                    for (unsigned int i = 0; i < sector.m_Holes[j].size(); i++)
+                    {
+                        Map::Data::Sector::Vertex &vertex = sector.m_Holes[j][i];
+                        if (vertex.m_TexId == -1)
+                            vertex.m_TexId = m_CurrentSectorDefaultWallTexId;
+                    }
+                }
+            }
+
+            m_CurrentSectorDefaultWallTexId = -1;
+        }
+
+        void SetDefaultWallTexture(std::string &iName)
+        {
+            auto found = m_MapTextureToTexId.find(iName);
+            if(found != m_MapTextureToTexId.end())
+                m_CurrentSectorDefaultWallTexId = found->second;
+            else // Texture wasn't found
+                m_CurrentSectorDefaultWallTexId = -1;
+        }
+
         void SetSectorCeiling(int iCeiling)
         {
             m_Data.m_Sectors.back().m_Ceiling = iCeiling;
@@ -37,15 +74,31 @@ namespace
             m_Data.m_Sectors.back().m_Floor = iFloor;
         }
 
-        void PushOutlineVertex(boost::fusion::vector<int, int> &iPosition)
+        void SetCurrentVertexCoordinates(boost::fusion::vector<int, int> &iPosition)
         {
-            Map::Data::Sector::Vertex vertex;
-            vertex.m_X = boost::fusion::at_c<0>(iPosition);
-            vertex.m_Y = boost::fusion::at_c<1>(iPosition);
-            vertex.m_TexId = -1;
-            vertex.m_TexUOffset = 0;
-            vertex.m_TexVOffset = 0;
-            m_Data.m_Sectors.back().m_Outline.push_back(vertex);
+            m_CurrentVertex.m_X = boost::fusion::at_c<0>(iPosition);
+            m_CurrentVertex.m_Y = boost::fusion::at_c<1>(iPosition);
+            m_CurrentVertex.m_TexId = -1;
+            m_CurrentVertex.m_TexUOffset = 0;
+            m_CurrentVertex.m_TexVOffset = 0;
+        }
+
+        void SetCurrentVertexTexture(std::string &iName)
+        {
+            auto found = m_MapTextureToTexId.find(iName);
+            if(found != m_MapTextureToTexId.end())
+                m_CurrentVertex.m_TexId = found->second;
+        }
+
+        void SetCurrentVertexUVOffsets(boost::fusion::vector<int, int> &iPosition)
+        {
+            m_CurrentVertex.m_TexUOffset = boost::fusion::at_c<0>(iPosition);
+            m_CurrentVertex.m_TexVOffset = boost::fusion::at_c<1>(iPosition);
+        }
+
+        void PushOutlineVertex()
+        {
+            m_Data.m_Sectors.back().m_Outline.push_back(m_CurrentVertex);
         }
 
         void PushNewHole()
@@ -53,15 +106,9 @@ namespace
             m_Data.m_Sectors.back().m_Holes.push_back(Map::Data::Sector::Polygon());
         }
 
-        void PushHoleVertex(boost::fusion::vector<int, int> &iPosition)
+        void PushHoleVertex()
         {
-            Map::Data::Sector::Vertex vertex;
-            vertex.m_X = boost::fusion::at_c<0>(iPosition);
-            vertex.m_Y = boost::fusion::at_c<1>(iPosition);
-            vertex.m_TexId = -1;
-            vertex.m_TexUOffset = 0;
-            vertex.m_TexVOffset = 0;
-            m_Data.m_Sectors.back().m_Holes.back().push_back(vertex);
+            m_Data.m_Sectors.back().m_Holes.back().push_back(m_CurrentVertex);
         }
 
         void SetPlayerStartPosition(boost::fusion::vector<int, int> &iPosition)
@@ -75,8 +122,29 @@ namespace
             m_Data.m_PlayerStartDirection = iDirection << ANGLE_SHIFT;
         }
         
+        void PushNewTexture()
+        {
+            Map::Data::Texture newTexture;
+            m_Data.m_Textures.push_back(newTexture);
+        }
+
+        void SetTextureName(std::string &iName)
+        {
+            m_MapTextureToTexId[iName] = m_Data.m_Textures.size() - 1;
+        }
+
+        void SetTexturePath(std::string &iPath)
+        {
+            m_Data.m_Textures.back().m_Path = iPath;
+        }
+
     public:
         Map::Data &m_Data;
+
+        std::map<std::string, int> m_MapTextureToTexId;
+        int m_CurrentSectorDefaultWallTexId;
+        
+        Map::Data::Sector::Vertex m_CurrentVertex;
     };
 
     namespace qi = boost::spirit::qi;
@@ -88,8 +156,8 @@ namespace
         MapGrammar(ExpressionAccumulator &iAccumulator) : MapGrammar::base_type(expression)
         {
             expression =
-                *(sector) >> 
                 player >> 
+                *(texture) >>
                 *(sector)
                 ;
             
@@ -117,8 +185,9 @@ namespace
                 openBracket [boost::bind(&ExpressionAccumulator::PushNewSector, &iAccumulator)] >>
                     *(hole | 
                     outline | 
-                    elevation) >> 
-                    closeBracket
+                    elevation |
+                    defaultWallTexture) >> 
+                    closeBracket [boost::bind(&ExpressionAccumulator::EndNewSector, &iAccumulator)]
                 ;
 
             outline =
@@ -130,7 +199,7 @@ namespace
                 ;
 
             outlineVertex =
-                vertex [boost::bind(&ExpressionAccumulator::PushOutlineVertex, &iAccumulator, _1)]
+                vertex [boost::bind(&ExpressionAccumulator::PushOutlineVertex, &iAccumulator)]
                 ;
 
             hole =
@@ -145,7 +214,7 @@ namespace
                 ;
 
             holeVertex =
-                vertex [boost::bind(&ExpressionAccumulator::PushHoleVertex, &iAccumulator, _1)]
+                vertex [boost::bind(&ExpressionAccumulator::PushHoleVertex, &iAccumulator)]
                 ;
 
             elevation =
@@ -164,8 +233,59 @@ namespace
                 "floor" >> openBracket >> qi::int_ >> closeBracket
                 ;
 
+            defaultWallTexture =
+                "defaultWallTexture" >>
+                openBracket >>
+                bracketedString [boost::bind(&ExpressionAccumulator::SetDefaultWallTexture, &iAccumulator, _1)]>>
+                closeBracket
+                ;
+
             vertex =   
-                openBracket >> qi::int_ >> ',' >> qi::int_ >> closeBracket  
+                openBracket >>
+                vertexCoordinates [boost::bind(&ExpressionAccumulator::SetCurrentVertexCoordinates, &iAccumulator, _1)] >>
+                -(vertexTexture) >> // Optional
+                closeBracket  
+                ;
+
+            vertexCoordinates %=
+                qi::int_ >> "," >> qi::int_
+                ;
+
+            vertexTexture =
+                openBracket >>
+                openBracket >>
+                bracketedString [boost::bind(&ExpressionAccumulator::SetCurrentVertexTexture, &iAccumulator, _1)] >>
+                closeBracket >>
+                openBracket >>
+                vertexCoordinates [boost::bind(&ExpressionAccumulator::SetCurrentVertexUVOffsets, &iAccumulator, _1)] >> // recycling
+                closeBracket >>
+                closeBracket
+                ;
+
+            texture =
+                "texture" >>  
+                openBracket [boost::bind(&ExpressionAccumulator::PushNewTexture, &iAccumulator)] >>
+                textureName >>
+                texturePath >>
+                closeBracket
+                ;
+
+            textureName =
+                "name" >> 
+                openBracket >>
+                bracketedString [boost::bind(&ExpressionAccumulator::SetTextureName, &iAccumulator, _1)] >> 
+                closeBracket
+                ;
+
+            texturePath =
+                "path" >>
+                openBracket >>
+                bracketedString [boost::bind(&ExpressionAccumulator::SetTexturePath, &iAccumulator, _1)] >>
+                closeBracket
+                ;
+
+            bracketedString %=
+                +(qi::char_ - '}')
                 ;
 
             openBracket = '{';
@@ -183,16 +303,25 @@ namespace
         qi::rule<Iterator, ascii::space_type> sector;
         qi::rule<Iterator, ascii::space_type> outline;
         qi::rule<Iterator, ascii::space_type> outlineVertices;
-        qi::rule<Iterator, boost::fusion::vector<int, int>(), ascii::space_type> outlineVertex;
+        qi::rule<Iterator, ascii::space_type> outlineVertex;
         qi::rule<Iterator, ascii::space_type> hole;
         qi::rule<Iterator, ascii::space_type> holeVertices;
-        qi::rule<Iterator, boost::fusion::vector<int, int>(), ascii::space_type> holeVertex;
+        qi::rule<Iterator, ascii::space_type> holeVertex;
         qi::rule<Iterator, ascii::space_type> elevation;
         qi::rule<Iterator, int(), ascii::space_type> floor;
         qi::rule<Iterator, int(), ascii::space_type> ceiling;
-        
+        qi::rule<Iterator, ascii::space_type> defaultWallTexture;
+
         qi::rule<Iterator, ascii::space_type> openBracket, closeBracket;
-        qi::rule<Iterator, boost::fusion::vector<int, int>(), ascii::space_type> vertex;
+        qi::rule<Iterator, ascii::space_type> vertex;
+        qi::rule<Iterator, boost::fusion::vector<int, int>(), ascii::space_type> vertexCoordinates;
+        qi::rule<Iterator, ascii::space_type> vertexTexture;
+
+        qi::rule<Iterator, ascii::space_type> texture;
+        qi::rule<Iterator, ascii::space_type> textureName;
+        qi::rule<Iterator, ascii::space_type> texturePath;
+
+        qi::rule<Iterator, std::string(), ascii::space_type> bracketedString;
     };
 }
 
