@@ -150,6 +150,34 @@ KDBData::Error KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Polygon &iPo
     else
         FillWalls<std::list<KDBData::Vertex>::iterator>(decimatedVertices.begin(), decimatedVertices.end(), oWalls);
 
+    // Report texture info
+    if(reverseIter)
+    {
+        // The map designer had direct orientation in mind, which is why we
+        // must be careful when reporting the texture coordinate from the current
+        // vertex to the matching wall
+        int i = iPolygon.size() - 2;
+        for (KDBData::Wall &wall : oWalls)
+        {
+            i = i == -1 ? iPolygon.size() - 1 : i;
+            wall.m_TexId = iPolygon[i].m_TexId;
+            wall.m_TexUOffset = iPolygon[i].m_TexUOffset;
+            wall.m_TexVOffset = iPolygon[i].m_TexVOffset;
+            i--;
+        }
+    }
+    else
+    {
+        unsigned int i = 0;
+        for (KDBData::Wall &wall : oWalls)
+        {
+            wall.m_TexId = iPolygon[i].m_TexId;
+            wall.m_TexUOffset = iPolygon[i].m_TexUOffset;
+            wall.m_TexVOffset = iPolygon[i].m_TexVOffset;
+            i++;
+        }
+    }
+
     return error;
 }
 
@@ -174,7 +202,7 @@ KDBData::Error KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
             }
 
             std::vector<KDBData::Wall> allWalls;
-            WallBreakerOperator wallBreakerOper(inclusionOper.GetResult());
+            WallBreakerOperator wallBreakerOper(inclusionOper.GetResult(), m_Sectors);
             ret = wallBreakerOper.Run(allWallsToBreak, allWalls);
 
             if(ret == KDBData::Error::OK)
@@ -306,6 +334,10 @@ KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWa
             kdWall.m_InSector = wall.m_InSector;
             kdWall.m_OutSector = wall.m_OutSector;
 
+            kdWall.m_TexId = wall.m_TexId;
+            kdWall.m_TexUOffset = wall.m_TexUOffset;
+            kdWall.m_TexVOffset = wall.m_TexVOffset;
+
             ioKDTreeNode->m_Walls.push_back(kdWall);
         }
 
@@ -342,6 +374,10 @@ KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWa
 
                 kdWall.m_InSector = wall.m_InSector;
                 kdWall.m_OutSector = wall.m_OutSector;
+
+                kdWall.m_TexId = wall.m_TexId;
+                kdWall.m_TexUOffset = wall.m_TexUOffset;
+                kdWall.m_TexVOffset = wall.m_TexVOffset;
 
                 ioKDTreeNode->m_Walls.push_back(kdWall);
             }

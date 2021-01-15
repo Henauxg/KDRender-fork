@@ -8,7 +8,7 @@ class SectorInclusions;
 class WallBreakerOperator
 {
 public:
-    WallBreakerOperator(const SectorInclusions &iSectorInclusions);
+    WallBreakerOperator(const SectorInclusions &iSectorInclusions, std::vector<KDBData::Sector> &iSectors);
     virtual ~WallBreakerOperator();
 
 public:
@@ -18,9 +18,11 @@ public:
 protected:
     bool SplitWall(KDBData::Wall iWall, const KDBData::Vertex &iVertex,
                    KDBData::Wall &oMinWall, KDBData::Wall &oMaxWall) const;
+    bool FindSupportWallInSector(const KDBData::Wall &iWall, int iSector, KDBData::Wall &oSupportWall) const;
 
 protected:
     const SectorInclusions &m_SectorInclusions;
+    const std::vector<KDBData::Sector> &m_Sectors;
 };
 
 #endif

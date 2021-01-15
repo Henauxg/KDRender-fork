@@ -12,7 +12,7 @@ WallRenderer::WallRenderer(KDRData::Wall &iWall, const KDRData::State &iState, c
     m_Map(iMap)
 {
     // For debug purposes
-    r = 1; // iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
+    r = iWall.m_pKDWall->m_TexId == -1 ? 1 : 0; // iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
     g = 1; // iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
     b = 1; // iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
 }

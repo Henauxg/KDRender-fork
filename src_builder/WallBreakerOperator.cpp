@@ -4,7 +4,9 @@
 
 #include <algorithm>
 
-WallBreakerOperator::WallBreakerOperator(const SectorInclusions &iSectorInclusions) : m_SectorInclusions(iSectorInclusions)
+WallBreakerOperator::WallBreakerOperator(const SectorInclusions &iSectorInclusions, std::vector<KDBData::Sector> &iSectors) :
+    m_SectorInclusions(iSectorInclusions),
+    m_Sectors(iSectors)
 {
 }
 
@@ -77,8 +79,11 @@ KDBData::Error WallBreakerOperator::RunOnCluster(const std::vector<KDBData::Wall
 {
     KDBData::Error ret = KDBData::Error::OK;
 
-    if (iWalls.empty())
+    if (iWalls.size() <= 1)
+    {
+        oWalls = iWalls;
         return ret;
+    }
 
     unsigned int constCoord, varCoord;
     constCoord = iWalls[0].GetConstCoordinate();
@@ -124,6 +129,10 @@ KDBData::Error WallBreakerOperator::RunOnCluster(const std::vector<KDBData::Wall
         brokenWalls.push_back(currentWall);
     }
 
+    // Merge walls
+    // Texture merging rules are really shady, I should have definitely thought about it
+    // before making the choice of considering each sector as a totally independant entity
+
     // Find all subsets of walls that are geometrically equal. Each subset is replaced
     // with a unique wall whose inner sector is the innermost sector of the whole set (same
     // goes for the outer sector)
@@ -140,12 +149,24 @@ KDBData::Error WallBreakerOperator::RunOnCluster(const std::vector<KDBData::Wall
             }
         }
 
+        // Need to merge brokenWalls[i] with uniqueWalls[found]
         if (found >= 0)
         {
-            KDBData::Wall newWall = brokenWalls[i];
-            newWall.m_InSector = m_SectorInclusions.GetInnermostSector(brokenWalls[i].m_InSector, uniqueWalls[found].m_InSector);
-            newWall.m_OutSector = m_SectorInclusions.GetOutermostSector(brokenWalls[i].m_OutSector, uniqueWalls[found].m_OutSector);
-            uniqueWalls[found] = newWall;
+            int innerMostSector = m_SectorInclusions.GetInnermostSector(brokenWalls[i].m_InSector, uniqueWalls[found].m_InSector);
+            int outerMostSector = m_SectorInclusions.GetOutermostSector(brokenWalls[i].m_OutSector, uniqueWalls[found].m_OutSector);
+
+            // If only one wall has a texture Id, newWall inherits from it
+            // If both walls have a texture Id, the one with the innermost InSector wins
+            if ((brokenWalls[i].m_TexId != -1 && uniqueWalls [found].m_TexId == -1) ||
+                (brokenWalls[i].m_TexId != -1 && brokenWalls[i].m_InSector == innerMostSector))
+            {
+                uniqueWalls[found].m_TexId = brokenWalls[i].m_TexId;
+                uniqueWalls[found].m_TexUOffset = brokenWalls[i].m_TexUOffset;
+                uniqueWalls[found].m_TexVOffset = brokenWalls[i].m_TexVOffset;
+            }
+
+            uniqueWalls[found].m_InSector = innerMostSector;
+            uniqueWalls[found].m_OutSector = outerMostSector;
         }
         else
             uniqueWalls.push_back(brokenWalls[i]);
@@ -166,7 +187,48 @@ KDBData::Error WallBreakerOperator::RunOnCluster(const std::vector<KDBData::Wall
         }
 
         if (found >= 0)
+        {
+            // If no texture yet, oWalls[found] inherits from uniqueWalls[i]'s TexId
+            if(oWalls[found].m_TexId == -1)
+                oWalls[found].m_TexId = uniqueWalls[i].m_TexId;
+            // Else, the shortest support wall in inSectors assigns its texture id
+            // Shady rule, sucks quite a bit
+            // Hopefully it works out in practice and doesn't make level design a living hell :/
+            else if(uniqueWalls[i].m_TexId != -1)
+            {
+                KDBData::Wall oldSupportWall, newSupportWall;
+                bool foundOldSupport = FindSupportWallInSector(oWalls[found], oWalls[found].m_InSector, oldSupportWall);
+                bool foundNewSupport = FindSupportWallInSector(uniqueWalls[i], uniqueWalls[i].m_InSector, newSupportWall);
+
+                if(!foundOldSupport || !foundNewSupport)
+                {
+                    ret = KDBData::Error::CANNOT_BREAK_WALL;
+                    break;
+                }
+
+                int constCoordOld = oldSupportWall.GetConstCoordinate();
+                int constCoordNew = newSupportWall.GetConstCoordinate();
+
+                if(constCoordOld != constCoordNew)
+                {
+                    ret = KDBData::Error::CANNOT_BREAK_WALL;
+                    break;
+                }
+
+                int varCoord = (1 + constCoordNew) % 2;
+                int oldSupportWallLength = std::abs(oldSupportWall.m_VertexTo.GetCoord(varCoord) - oldSupportWall.m_VertexFrom.GetCoord(varCoord));
+                int newSupportWallLength = std::abs(newSupportWall.m_VertexTo.GetCoord(varCoord) - newSupportWall.m_VertexFrom.GetCoord(varCoord));
+
+                if(newSupportWallLength < oldSupportWallLength)
+                {
+                    oWalls[found].m_TexId = uniqueWalls[i].m_TexId;
+                    oWalls[found].m_TexUOffset = uniqueWalls[i].m_TexUOffset;
+                    oWalls[found].m_TexVOffset = uniqueWalls[i].m_TexVOffset;
+                }
+            }
+
             oWalls[found].m_OutSector = uniqueWalls[i].m_InSector;
+        }
         else
             oWalls.push_back(uniqueWalls[i]);
     }
@@ -214,4 +276,36 @@ bool WallBreakerOperator::SplitWall(KDBData::Wall iWall, const KDBData::Vertex &
     }
 
     return hasBeenSplit;
+}
+
+bool WallBreakerOperator::FindSupportWallInSector(const KDBData::Wall &iWall, int iSector, KDBData::Wall &oSupportWall) const
+{
+    if(iSector == -1)
+        return false;
+
+    bool found = false;
+
+    int constCoord = iWall.GetConstCoordinate();
+    int varCoord = (constCoord + 1) % 2;
+
+    int minInputVal = std::min(iWall.m_VertexFrom.GetCoord(varCoord), iWall.m_VertexTo.GetCoord(varCoord));
+    int maxInputVal = std::max(iWall.m_VertexFrom.GetCoord(varCoord), iWall.m_VertexTo.GetCoord(varCoord));
+
+    for (const KDBData::Wall &supportWall : m_Sectors[iSector].m_Walls)
+    {
+        if (supportWall.GetConstCoordinate() == constCoord)
+        {
+            int minSupportVal = std::min(supportWall.m_VertexFrom.GetCoord(varCoord), supportWall.m_VertexTo.GetCoord(varCoord));
+            int maxSupportVal = std::max(supportWall.m_VertexFrom.GetCoord(varCoord), supportWall.m_VertexTo.GetCoord(varCoord));
+
+            if(minSupportVal <= minInputVal && maxInputVal <= maxSupportVal)
+            {
+                found = true;
+                oSupportWall = supportWall;
+                break;
+            }
+        }
+    }
+
+    return found;
 }
