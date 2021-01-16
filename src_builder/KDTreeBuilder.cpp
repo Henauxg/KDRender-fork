@@ -5,6 +5,7 @@
 #include "KDTreeMap.h"
 #include "SectorInclusionOperator.h"
 #include "WallBreakerOperator.h"
+#include "ImageFromFileOperator.h"
 
 #include <vector>
 #include <list>

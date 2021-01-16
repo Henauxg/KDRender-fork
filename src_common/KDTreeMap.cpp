@@ -1,5 +1,8 @@
 #include "KDTreeMap.h"
 
+#include <cstdint>
+#include <cstring>
+
 KDTreeNode::KDTreeNode():
     m_PositiveSide(nullptr),
     m_NegativeSide(nullptr)
@@ -157,6 +160,13 @@ KDTreeMap::~KDTreeMap()
     if(m_RootNode)
         delete m_RootNode;
     m_RootNode = nullptr;
+
+    for (unsigned int i = 0; i < m_Textures.size(); i++)
+    {
+        if(m_Textures[i].m_pData)
+            delete m_Textures[i].m_pData;
+        m_Textures[i].m_pData = nullptr;
+    }
 }
 
 void KDTreeMap::Stream(char *&oData, unsigned int &oSize) const
@@ -175,6 +185,25 @@ void KDTreeMap::Stream(char *&oData, unsigned int &oSize) const
 
         *(reinterpret_cast<int *>(pData)) = m_PlayerStartDirection;
         pData += sizeof(int);
+
+        *(reinterpret_cast<unsigned int *>(pData)) = m_Textures.size();
+        pData += sizeof(unsigned int);
+
+        for (unsigned int i = 0; i < m_Textures.size(); i++)
+        {
+            *(reinterpret_cast<unsigned int *>(pData)) = m_Textures[i].m_Height;
+            pData += sizeof(unsigned int);
+
+            *(reinterpret_cast<unsigned int *>(pData)) = m_Textures[i].m_Width;
+            pData += sizeof(unsigned int);
+
+            unsigned int length = sizeof(uint32_t) * m_Textures[i].m_Height * m_Textures[i].m_Width;
+            if(length)
+            {
+                memcpy(pData, m_Textures[i].m_pData, length);
+                pData += length;
+            }
+        }
 
         *(reinterpret_cast<unsigned int *>(pData)) = m_Sectors.size();
         pData += sizeof(unsigned int);
@@ -209,6 +238,29 @@ void KDTreeMap::UnStream(const char *iData, unsigned int &oNbBytesRead)
     m_PlayerStartDirection = *(reinterpret_cast<const int *>(iData));
     iData += sizeof(int);
 
+    unsigned nbTextures = *(reinterpret_cast<const int *>(iData));
+    iData += sizeof(int);
+
+    for (unsigned int i = 0; i < nbTextures; i++)
+    {
+        KDMapData::Texture texture;
+
+        texture.m_Height = *(reinterpret_cast<const int *>(iData));
+        iData += sizeof(int);
+
+        texture.m_Width = *(reinterpret_cast<const int *>(iData));
+        iData += sizeof(int);
+
+        texture.m_pData = nullptr;
+        unsigned int length = sizeof(uint32_t) * texture.m_Width * texture.m_Height;
+        if(length)
+        {
+            texture.m_pData = new char[length];
+            memcpy(texture.m_pData, iData, length);
+            iData += length;
+        }
+    }
+
     unsigned nbSectors = *(reinterpret_cast<const int *>(iData));
     iData += sizeof(int);
 
@@ -238,6 +290,14 @@ unsigned int KDTreeMap::ComputeStreamSize() const
     unsigned int streamSize = 0;
 
     streamSize += 3 * sizeof(int); // m_PlayerStartX, m_PlayerStartY, m_PlayerStartDirection
+
+    streamSize += sizeof(unsigned int); // m_Textures.size()
+
+    for(unsigned int i = 0; i < m_Textures.size(); i++)
+    {
+        streamSize +=  2 * sizeof(unsigned int); // m_Height and m_Width
+        streamSize += m_Textures[i].m_Height * m_Textures[i].m_Width * sizeof(uint32_t); // RGBA assumed
+    }
 
     streamSize += sizeof(unsigned int); // m_Sectors.size()
     streamSize += m_Sectors.size() * sizeof(KDMapData::Sector);

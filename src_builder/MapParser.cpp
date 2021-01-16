@@ -30,25 +30,22 @@ namespace
 
         void EndNewSector()
         {
-            if(!m_CurrentSectorDefaultWallTexId != -1)
+            Map::Data::Sector &sector = m_Data.m_Sectors.back();
+
+            for (unsigned int i = 0; i < sector.m_Outline.size(); i++)
             {
-                Map::Data::Sector &sector = m_Data.m_Sectors.back();
+                Map::Data::Sector::Vertex &vertex = sector.m_Outline[i];
+                if(vertex.m_TexId == -2)
+                    vertex.m_TexId = m_CurrentSectorDefaultWallTexId;
+            }
 
-                for (unsigned int i = 0; i < sector.m_Outline.size(); i++)
+            for (unsigned int j = 0; j < sector.m_Holes.size(); j++)
+            {
+                for (unsigned int i = 0; i < sector.m_Holes[j].size(); i++)
                 {
-                    Map::Data::Sector::Vertex &vertex = sector.m_Outline[i];
-                    if(vertex.m_TexId == -1)
+                    Map::Data::Sector::Vertex &vertex = sector.m_Holes[j][i];
+                    if (vertex.m_TexId == -2)
                         vertex.m_TexId = m_CurrentSectorDefaultWallTexId;
-                }
-
-                for (unsigned int j = 0; j < sector.m_Holes.size(); j++)
-                {
-                    for (unsigned int i = 0; i < sector.m_Holes[j].size(); i++)
-                    {
-                        Map::Data::Sector::Vertex &vertex = sector.m_Holes[j][i];
-                        if (vertex.m_TexId == -1)
-                            vertex.m_TexId = m_CurrentSectorDefaultWallTexId;
-                    }
                 }
             }
 
@@ -78,7 +75,7 @@ namespace
         {
             m_CurrentVertex.m_X = boost::fusion::at_c<0>(iPosition);
             m_CurrentVertex.m_Y = boost::fusion::at_c<1>(iPosition);
-            m_CurrentVertex.m_TexId = -1;
+            m_CurrentVertex.m_TexId = -2; // -2: not set at all (default texture for current sector will be set), -1 is reserved for "noTexture"
             m_CurrentVertex.m_TexUOffset = 0;
             m_CurrentVertex.m_TexVOffset = 0;
         }
@@ -88,6 +85,11 @@ namespace
             auto found = m_MapTextureToTexId.find(iName);
             if(found != m_MapTextureToTexId.end())
                 m_CurrentVertex.m_TexId = found->second;
+        }
+
+        void SetCurrentVertexNoTexture()
+        {
+            m_CurrentVertex.m_TexId = -1;
         }
 
         void SetCurrentVertexUVOffsets(boost::fusion::vector<int, int> &iPosition)
@@ -243,7 +245,7 @@ namespace
             vertex =   
                 openBracket >>
                 vertexCoordinates [boost::bind(&ExpressionAccumulator::SetCurrentVertexCoordinates, &iAccumulator, _1)] >>
-                -(vertexTexture) >> // Optional
+                -(optionalVertexTextureInfo) >> // Optional
                 closeBracket  
                 ;
 
@@ -251,15 +253,23 @@ namespace
                 qi::int_ >> "," >> qi::int_
                 ;
 
-            vertexTexture =
+            optionalVertexTextureInfo =
                 openBracket >>
+                (vertexTexture | vertexNoTexture [boost::bind(&ExpressionAccumulator::SetCurrentVertexNoTexture, &iAccumulator)]) >>
+                closeBracket
+                ;
+
+            vertexTexture =
                 openBracket >>
                 bracketedString [boost::bind(&ExpressionAccumulator::SetCurrentVertexTexture, &iAccumulator, _1)] >>
                 closeBracket >>
                 openBracket >>
                 vertexCoordinates [boost::bind(&ExpressionAccumulator::SetCurrentVertexUVOffsets, &iAccumulator, _1)] >> // recycling
-                closeBracket >>
                 closeBracket
+                ;
+
+            vertexNoTexture =
+                "noTexture"
                 ;
 
             texture =
@@ -315,7 +325,9 @@ namespace
         qi::rule<Iterator, ascii::space_type> openBracket, closeBracket;
         qi::rule<Iterator, ascii::space_type> vertex;
         qi::rule<Iterator, boost::fusion::vector<int, int>(), ascii::space_type> vertexCoordinates;
+        qi::rule<Iterator, ascii::space_type> optionalVertexTextureInfo;
         qi::rule<Iterator, ascii::space_type> vertexTexture;
+        qi::rule<Iterator, ascii::space_type> vertexNoTexture;
 
         qi::rule<Iterator, ascii::space_type> texture;
         qi::rule<Iterator, ascii::space_type> textureName;

@@ -14,6 +14,7 @@ namespace KDBData
         INVALID_POLYGON,
         SECTOR_INTERSECTION,
         CANNOT_BREAK_WALL,
+        CANNOT_LOAD_TEXTURE,
         UNKNOWN_FAILURE
     };
 

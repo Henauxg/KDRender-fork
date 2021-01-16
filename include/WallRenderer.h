@@ -91,8 +91,8 @@ void WallRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX, CType i
                                            int &oMinYUnclamped, int &oMaxYUnclamped) const
 {
     // For extra precision, the inverse range has been shifted. Need to shift it back
-    // oT = iMaxX == iMinX ? CType(0) : (static_cast<CType>(iX - iMinX) * iInvMinMaxXRange) >> 7u;
-    oT = iMaxX == iMinX ? CType(0) : (static_cast<CType>(iX - iMinX) * iInvMinMaxXRange) / (1 << 7u); // For float/double
+    oT = iMaxX == iMinX ? CType(0) : (static_cast<CType>(iX - iMinX) * iInvMinMaxXRange) >> 7u;
+    // oT = iMaxX == iMinX ? CType(0) : (static_cast<CType>(iX - iMinX) * iInvMinMaxXRange) / (1 << 7u); // For float/double
     oMinYUnclamped = ((1 - oT) * iMinVertexBottomPixel + oT * iMaxVertexBottomPixel);
     oMaxYUnclamped = ((1 - oT) * iMinVertexTopPixel + oT * iMaxVertexTopPixel);
     oMinY = std::max<int>(oMinYUnclamped, m_pBottomOcclusionBuffer[iX]);

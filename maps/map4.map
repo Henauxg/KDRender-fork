@@ -13,6 +13,12 @@ texture
     path {maps/textures/bricks.png}
 }
 
+texture
+{
+    name {Camo}
+    path {maps/textures/camo5.png}
+}
+
 sector
 {
     outline
@@ -162,7 +168,7 @@ sector
 {
     outline
     {
-        vertices {{300, -200} {300, -100} {450, -100} {450, -200}}
+        vertices {{300, -200 {noTexture}} {300, -100} {450, -100} {450, -200}}
     }
 
     elevation
@@ -170,6 +176,8 @@ sector
         ceiling {140}
         floor {70}
     }
+    
+    defaultWallTexture {Camo}
 }
 
 sector

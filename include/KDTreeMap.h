@@ -38,6 +38,13 @@ namespace KDMapData
         int m_TexUOffset;
         int m_TexVOffset;
     };
+
+    struct Texture
+    {
+        unsigned int m_Height;
+        unsigned int m_Width;
+        char *m_pData; // RGBA assumed
+    };
 }
 
 class KDTreeNode
@@ -124,8 +131,11 @@ protected:
     unsigned int ComputeStreamSize() const;
 
 protected:
+    std::vector<KDMapData::Texture> m_Textures;
     std::vector<KDMapData::Sector> m_Sectors;
+
     KDTreeNode *m_RootNode;
+
     int m_PlayerStartX;
     int m_PlayerStartY;
     int m_PlayerStartDirection;
