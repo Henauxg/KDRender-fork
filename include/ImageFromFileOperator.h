@@ -13,14 +13,22 @@ public:
 
 public:
     void SetRelativePath(const std::string &iPath);
+    
+public:
     KDBData::Error Run();
-    char* GetData();
+
+public:
+    unsigned int GetHeight() const;
+    unsigned int GetWidth() const;
+    unsigned char* GetData();
 
 protected:
     std::string m_RelativePath;
 
     // Output data
-    char *m_pData;
+    unsigned int m_Height;
+    unsigned int m_Width;
+    unsigned char *m_pData;
 };
 
 #endif

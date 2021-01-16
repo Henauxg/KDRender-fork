@@ -2,21 +2,27 @@ player
 {
     start
     {
-        position {5, 5}
-        direction {180}
+        position {41, 95}
+        direction {328}
     }
 }
 
 texture
 {
     name {Bricks}
-    path {maps/textures/bricks.png}
+    path {maps/textures/brick.png}
 }
 
 texture
 {
     name {Camo}
     path {maps/textures/camo5.png}
+}
+
+texture
+{
+    name {W64b2}
+    path {maps/textures/w64b_2.png}
 }
 
 sector
@@ -106,6 +112,8 @@ sector
         ceiling {120}
         floor {70}
     }
+    
+    defaultWallTexture {W64b2}
 }
 
 sector
@@ -120,6 +128,8 @@ sector
         ceiling {70}
         floor {70}
     }
+    
+    defaultWallTexture {Bricks}
 }
 
 sector
@@ -134,6 +144,8 @@ sector
         ceiling {70}
         floor {70}
     }
+    
+    defaultWallTexture {Bricks}
 }
 
 sector
@@ -148,6 +160,8 @@ sector
         ceiling {70}
         floor {70}
     }
+    
+    defaultWallTexture {Bricks}
 }
 
 sector
@@ -162,6 +176,8 @@ sector
         ceiling {70}
         floor {70}
     }
+    
+    defaultWallTexture {Bricks}
 }
 
 sector

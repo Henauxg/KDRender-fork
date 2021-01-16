@@ -1,7 +1,4 @@
 #include "WallRenderer.h"
-
-#include "GeomUtils.h"
-
 #include <algorithm>
 #include <cstring>
 
@@ -9,7 +6,10 @@ WallRenderer::WallRenderer(KDRData::Wall &iWall, const KDRData::State &iState, c
     m_Wall(iWall),
     m_State(iState),
     m_Settings(iSettings),
-    m_Map(iMap)
+    m_Map(iMap),
+    m_pTexture(nullptr),
+    m_TexUOffset(0),
+    m_TexVOffset(0)
 {
     // For debug purposes
     if(m_Wall.m_pKDWall->m_TexId == 0)
@@ -29,6 +29,13 @@ WallRenderer::WallRenderer(KDRData::Wall &iWall, const KDRData::State &iState, c
         r = 1; // iWall.m_pKDWall->m_InSector % 3 == 0 ? 1 : 0;
         g = 1; // iWall.m_pKDWall->m_InSector % 3 == 1 ? 1 : 0;
         b = 1; // iWall.m_pKDWall->m_InSector % 3 == 2 ? 1 : 0;
+    }
+
+    if(m_Wall.m_pKDWall->m_TexId != -1)
+    {
+        m_pTexture = &m_Map.m_Textures[m_Wall.m_pKDWall->m_TexId];
+        m_TexUOffset = m_Wall.m_pKDWall->m_TexUOffset;
+        m_TexVOffset = m_Wall.m_pKDWall->m_TexVOffset;
     }
 }
 
@@ -59,12 +66,25 @@ void WallRenderer::Render(std::vector<KDRData::FlatSurface> &oGeneratedFlats)
         KDRData::Vertex intersectionVertex;
         if (HalfLineSegmentIntersection<KDRData::Vertex>(m_State.m_PlayerPosition, m_State.m_FrustumToLeft, m_Wall.m_VertexFrom, m_Wall.m_VertexTo, intersectionVertex))
         {
-            m_MinVertex = intersectionVertex;
+            // Avoid losing precision
+            m_MinVertex = m_Wall.m_VertexFrom;
+            if (m_Wall.m_VertexFrom.m_X == m_Wall.m_VertexTo.m_X)
+                m_MinVertex.m_Y = intersectionVertex.m_Y;
+            else
+                m_MinVertex.m_X = intersectionVertex.m_X;
+
             m_MinAngle = -m_Settings.m_PlayerHorizontalFOV / 2;
         }
+
         if (HalfLineSegmentIntersection<KDRData::Vertex>(m_State.m_PlayerPosition, m_State.m_FrustumToRight, m_Wall.m_VertexFrom, m_Wall.m_VertexTo, intersectionVertex))
         {
-            m_MaxVertex = intersectionVertex;
+            m_MaxVertex = m_Wall.m_VertexFrom;
+            // Avoid losing precision
+            if (m_Wall.m_VertexFrom.m_X == m_Wall.m_VertexTo.m_X)
+                m_MaxVertex.m_Y = intersectionVertex.m_Y;
+            else
+                m_MaxVertex.m_X = intersectionVertex.m_X;
+
             m_MaxAngle = m_Settings.m_PlayerHorizontalFOV / 2;
         }
     }
@@ -129,6 +149,27 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
 
     // We need further precision for this ratio
     m_InvMinMaxXRange = m_maxX == m_MinX ? static_cast<CType>(0) : (1 << 7u) / CType(m_maxX - m_MinX);
+
+    // Texture U coordinate range calculation
+    if(m_pTexture)
+    {
+        if (m_MinVertex.m_Y == m_MaxVertex.m_Y)
+        {
+            m_MinTexelX = ((m_MinVertex.m_X + m_TexUOffset) * CType(int(m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+            m_MaxTexelX = ((m_MaxVertex.m_X + m_TexUOffset) * CType(int(m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+        }
+        else
+        {
+            m_MinTexelX = ((m_MinVertex.m_Y + m_TexUOffset) * CType(int(m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+            m_MaxTexelX = ((m_MaxVertex.m_Y + m_TexUOffset) * CType(int(m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+        }
+    }
+    else
+    {
+        // Useless
+        m_MinTexelX = 0;
+        m_MaxTexelX = 1;
+    }
 
     m_MinDist = DistInt(m_State.m_PlayerPosition, m_MinVertex) * cosInt(m_MinAngle); // Correction for vertical distortion
     m_MaxDist = DistInt(m_State.m_PlayerPosition, m_MaxVertex) * cosInt(m_MaxAngle); // Correction for vertical distortion
@@ -212,14 +253,15 @@ void WallRenderer::RenderHardWall(std::vector<KDRData::FlatSurface> &oGeneratedF
     bool addFloorSurface = false;
     bool addCeilingSurface = false;
 
-    CType t;
+    CType t, minTexelY, maxTexelY;
     int minY, maxY, minYUnclamped, maxYUnclamped;
+    int texelXClamped;
     for (int x = m_MinX; x <= m_maxX; x++)
     {
         // TODO: optimize divisions
         if (!m_pHorizOcclusionBuffer[x])
         {
-            ComputeRenderParameters(x, m_MinX, m_maxX, m_InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
+            ComputeRenderParameters(x, m_MinX, m_maxX, m_InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, m_InSector.m_Floor, m_InSector.m_Ceiling, t, minY, maxY, minYUnclamped, maxYUnclamped, texelXClamped, minTexelY, maxTexelY);
 
             floorSurface.m_MaxY[x] = std::min(minYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
             floorSurface.m_MinY[x] = m_pBottomOcclusionBuffer[x];
@@ -232,7 +274,12 @@ void WallRenderer::RenderHardWall(std::vector<KDRData::FlatSurface> &oGeneratedF
                 addCeilingSurface = true;
 
             if (minY <= maxY)
-                RenderColumn(t, m_MinVertexColor, m_MaxVertexColor, minY, maxY, x, r, g, b);
+            {
+                if(m_pTexture)
+                    RenderColumnWithTexture(t, m_MinVertexColor, m_MaxVertexColor, minY, maxY, x, texelXClamped, minTexelY, maxTexelY);
+                else
+                    RenderColumn(t, m_MinVertexColor, m_MaxVertexColor, minY, maxY, x, r, g, b);
+            }
         }
     }
     // Nothing will be drawn behind this wall
@@ -246,8 +293,10 @@ void WallRenderer::RenderHardWall(std::vector<KDRData::FlatSurface> &oGeneratedF
 
 void WallRenderer::RenderSoftWallTop(std::vector<KDRData::FlatSurface> &oGeneratedFlats)
 {
-    CType eyeToTopCeiling = std::max(m_InSector.m_Ceiling, m_OutSector.m_Ceiling) - m_State.m_PlayerZ;
-    CType eyeToBottomCeiling = std::min(m_InSector.m_Ceiling, m_OutSector.m_Ceiling) - m_State.m_PlayerZ;
+    CType topCeiling = std::max(m_InSector.m_Ceiling, m_OutSector.m_Ceiling);
+    CType bottomCeiling = std::min(m_InSector.m_Ceiling, m_OutSector.m_Ceiling);
+    CType eyeToTopCeiling = topCeiling - m_State.m_PlayerZ;
+    CType eyeToBottomCeiling = bottomCeiling - m_State.m_PlayerZ;
 
     // Same here, need to correct for distortion
     // I'm leaving the old formulas as comments since they are much more intuitive
@@ -278,14 +327,15 @@ void WallRenderer::RenderSoftWallTop(std::vector<KDRData::FlatSurface> &oGenerat
 
     bool addCeilingSurface = false;
 
-    CType t;
+    CType t, minTexelY, maxTexelY;
     int minY, maxY, minYUnclamped, maxYUnclamped;
+    int texelXClamped;
     for (unsigned int x = m_MinX; x <= m_maxX; x++)
     {
         // TODO: optimize divisions
         if (!m_pHorizOcclusionBuffer[x])
         {
-            ComputeRenderParameters(x, m_MinX, m_maxX, m_InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
+            ComputeRenderParameters(x, m_MinX, m_maxX, m_InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, bottomCeiling, topCeiling, t, minY, maxY, minYUnclamped, maxYUnclamped, texelXClamped, minTexelY, maxTexelY);
 
             if (wallIsVisible)
                 ceilingSurface.m_MinY[x] = std::max(maxYUnclamped, m_pBottomOcclusionBuffer[x]);
@@ -300,7 +350,12 @@ void WallRenderer::RenderSoftWallTop(std::vector<KDRData::FlatSurface> &oGenerat
             // used for floor and ceiling surfaces
             m_pTopOcclusionBuffer[x] = std::max(WINDOW_HEIGHT - 1 - minYUnclamped, m_pTopOcclusionBuffer[x]);
             if (minY <= maxY && wallIsVisible)
-                RenderColumn(t, m_MinVertexColor, m_MaxVertexColor, minY, maxY, x, r, g, b);
+            {
+                if (m_pTexture)
+                    RenderColumnWithTexture(t, m_MinVertexColor, m_MaxVertexColor, minY, maxY, x, texelXClamped, minTexelY, maxTexelY);
+                else
+                    RenderColumn(t, m_MinVertexColor, m_MaxVertexColor, minY, maxY, x, r, g, b);
+            }
         }
     }
 
@@ -310,8 +365,10 @@ void WallRenderer::RenderSoftWallTop(std::vector<KDRData::FlatSurface> &oGenerat
 
 void WallRenderer::RenderSoftWallBottom(std::vector<KDRData::FlatSurface> &oGeneratedFlats)
 {
-    CType eyeToTopFloor = m_State.m_PlayerZ - std::max(m_InSector.m_Floor, m_OutSector.m_Floor);
-    CType eyeToBottomFloor = m_State.m_PlayerZ - std::min(m_InSector.m_Floor, m_OutSector.m_Floor);
+    CType topFloor = std::max(m_InSector.m_Floor, m_OutSector.m_Floor);
+    CType bottomFloor = std::min(m_InSector.m_Floor, m_OutSector.m_Floor);
+    CType eyeToTopFloor = m_State.m_PlayerZ - topFloor;
+    CType eyeToBottomFloor = m_State.m_PlayerZ - bottomFloor;
 
     // Same here, need to correct for distortion
     // I'm leaving the old formulas as comments since they are much more intuitive
@@ -342,14 +399,15 @@ void WallRenderer::RenderSoftWallBottom(std::vector<KDRData::FlatSurface> &oGene
                          (m_WhichSide < 0 && m_OutSector.m_Floor < m_InSector.m_Floor);
     bool addFloorSurface = false;
 
-    CType t;
+    CType t, minTexelY, maxTexelY;
     int minY, maxY, minYUnclamped, maxYUnclamped;
+    int texelXClamped;
     for (unsigned int x = m_MinX; x <= m_maxX; x++)
     {
         // TODO: optimize divisions
         if (!m_pHorizOcclusionBuffer[x])
         {
-            ComputeRenderParameters(x, m_MinX, m_maxX, m_InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, t, minY, maxY, minYUnclamped, maxYUnclamped);
+            ComputeRenderParameters(x, m_MinX, m_maxX, m_InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, bottomFloor, topFloor, t, minY, maxY, minYUnclamped, maxYUnclamped, texelXClamped, minTexelY, maxTexelY);
 
             if (wallIsVisible)
                 floorSurface.m_MaxY[x] = std::min(minYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[x]);
@@ -364,7 +422,12 @@ void WallRenderer::RenderSoftWallBottom(std::vector<KDRData::FlatSurface> &oGene
             // used for floor and ceiling surfaces
             m_pBottomOcclusionBuffer[x] = std::max(m_pBottomOcclusionBuffer[x], maxY);
             if (minY <= maxY && wallIsVisible)
-                RenderColumn(t, m_MinVertexColor, m_MaxVertexColor, minY, maxY, x, r, g, b);
+            {
+                if (m_pTexture)
+                    RenderColumnWithTexture(t, m_MinVertexColor, m_MaxVertexColor, minY, maxY, x, texelXClamped, minTexelY, maxTexelY);
+                else
+                    RenderColumn(t, m_MinVertexColor, m_MaxVertexColor, minY, maxY, x, r, g, b);
+            }
         }
     }
 

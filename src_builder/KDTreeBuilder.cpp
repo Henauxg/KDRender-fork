@@ -184,8 +184,38 @@ KDBData::Error KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Polygon &iPo
 
 KDBData::Error KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
 {
+    KDBData::Error ret = KDBData::Error::OK;
+
+    oKDTree = new KDTreeMap;
+    if(!oKDTree)
+        return KDBData::Error::UNKNOWN_FAILURE;
+
+    // Load textures first
+    for (unsigned int i = 0; i < m_Map.GetData().m_Textures.size(); i++)
+    {
+        const Map::Data::Texture &textureInfos(m_Map.GetData().m_Textures[i]);
+
+        ImageFromFileOperator imgFromFileOper;
+        imgFromFileOper.SetRelativePath(textureInfos.m_Path);
+        KDBData::Error localError = imgFromFileOper.Run();
+        
+        if(localError == KDBData::Error::OK)
+        {
+            KDMapData::Texture textureData;
+            textureData.m_Height = imgFromFileOper.GetHeight();
+            textureData.m_Width = imgFromFileOper.GetWidth();
+            textureData.m_pData = imgFromFileOper.GetData();
+            oKDTree->m_Textures.push_back(textureData);
+        }
+        else
+            ret = localError;
+    }
+
+    if(ret != KDBData::Error::OK)
+        return ret;
+
     SectorInclusionOperator inclusionOper(m_Sectors);
-    KDBData::Error ret = inclusionOper.Run();
+    ret = inclusionOper.Run();
 
     if (ret == KDBData::Error::OK)
     {
@@ -208,8 +238,6 @@ KDBData::Error KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
 
             if(ret == KDBData::Error::OK)
             {
-                oKDTree = new KDTreeMap;
-
                 oKDTree->m_PlayerStartX = m_Map.GetData().m_PlayerStartPosition.first;
                 oKDTree->m_PlayerStartY = m_Map.GetData().m_PlayerStartPosition.second;
                 oKDTree->m_PlayerStartDirection = m_Map.GetData().m_PlayerStartDirection;

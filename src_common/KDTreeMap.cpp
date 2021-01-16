@@ -255,10 +255,12 @@ void KDTreeMap::UnStream(const char *iData, unsigned int &oNbBytesRead)
         unsigned int length = sizeof(uint32_t) * texture.m_Width * texture.m_Height;
         if(length)
         {
-            texture.m_pData = new char[length];
+            texture.m_pData = new unsigned char[length];
             memcpy(texture.m_pData, iData, length);
             iData += length;
         }
+
+        m_Textures.push_back(texture);
     }
 
     unsigned nbSectors = *(reinterpret_cast<const int *>(iData));

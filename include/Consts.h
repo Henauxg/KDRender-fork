@@ -5,7 +5,8 @@
 #define WINDOW_HEIGHT 768
 
 #define ANGLE_SHIFT 7
-#define POSITION_SCALE 10
+#define POSITION_SCALE 8
+#define TEXEL_SCALE 32
 
 #define ARITHMETIC_SHIFT(nb, shift) ((nb) >> (shift))
 

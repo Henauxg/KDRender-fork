@@ -175,7 +175,7 @@ namespace
                 ;
                 
             position =
-                "position" >> vertex
+                "position" >> openBracket >> qi::int_ >> "," >> qi::int_ >> closeBracket
                 ;
                 
             direction =

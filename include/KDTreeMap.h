@@ -43,7 +43,7 @@ namespace KDMapData
     {
         unsigned int m_Height;
         unsigned int m_Width;
-        char *m_pData; // RGBA assumed
+        unsigned char *m_pData; // RGBA assumed
     };
 }
 

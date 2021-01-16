@@ -230,4 +230,38 @@ inline Number Clamp(Number iVal, Number iMin, Number iMax)
     return (iVal < iMin ? iMin : (iVal > iMax ? iMax : iVal));
 }
 
+// iDiv is assumed positive
+template <typename Number>
+inline Number Mod(const Number &iVal, const Number &iDiv)
+{
+    return iVal % iDiv;
+}
+
+template<>
+inline float Mod<float>(const float &iVal, const float &iDiv)
+{
+    if (iVal >= 0)
+        return std::fmod(iVal, iDiv);
+    else
+        return iDiv + std::fmod(iVal, iDiv);
+}
+
+template <>
+inline double Mod<double>(const double &iVal, const double &iDiv)
+{
+    if(iVal >= 0)
+        return std::fmod(iVal, iDiv);
+    else
+        return iDiv + std::fmod(iVal, iDiv);
+}
+
+template <>
+inline FP32<FP_SHIFT> Mod<FP32<FP_SHIFT>>(const FP32<FP_SHIFT> &iVal, const FP32<FP_SHIFT> &iDiv)
+{
+    if(iVal >= 0)
+        return iVal - (static_cast<int>(iVal / iDiv) * iDiv);
+    else
+        return iDiv + iVal - ((static_cast<int>(iVal / iDiv) + 1) * iDiv);
+}
+
 #endif
