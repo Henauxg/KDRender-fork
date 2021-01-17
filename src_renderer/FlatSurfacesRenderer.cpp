@@ -2,10 +2,11 @@
 
 #include "GeomUtils.h"
 
-FlatSurfacesRenderer::FlatSurfacesRenderer(const std::map<CType, std::vector<KDRData::FlatSurface>> &iFlatSurfaces, const KDRData::State &iState, const KDRData::Settings &iSettings):
+FlatSurfacesRenderer::FlatSurfacesRenderer(const std::map<CType, std::vector<KDRData::FlatSurface>> &iFlatSurfaces, const KDRData::State &iState, const KDRData::Settings &iSettings, const KDTreeMap &iMap):
     m_FlatSurfaces(iFlatSurfaces),
     m_State(iState),
-    m_Settings(iSettings)
+    m_Settings(iSettings),
+    m_Map(iMap)
 {
 }
 
@@ -99,6 +100,29 @@ void FlatSurfacesRenderer::Render()
 
         for (unsigned int i = 0; i < currentSurfaces.size(); i++)
         {
+            // TODO textures
+            // DEMO CODE
+            int sectorIdx = currentSurfaces[i].m_SectorIdx;
+            int texIdx = 0;
+            if (sectorIdx == 10 || sectorIdx == 15)
+                texIdx = 1;
+            if (sectorIdx == 5 || sectorIdx == 11 || sectorIdx == 12)
+                texIdx = 2;
+            if (sectorIdx == 4)
+                texIdx = 3;
+            if (sectorIdx == 13 || sectorIdx == 14)
+                texIdx = 2;
+            if (sectorIdx == 1 || sectorIdx == 2 || sectorIdx == 3)
+                texIdx = 4;
+            if (sectorIdx == 17 || sectorIdx == 18)
+                texIdx = 4;
+
+            const KDMapData::Texture &defaultWallTexture = m_Map.m_Textures[texIdx];
+            m_CurrSectorR = defaultWallTexture.m_pData[64u * 4u * defaultWallTexture.m_Height + 64u * 4u + 0];
+            m_CurrSectorG = defaultWallTexture.m_pData[64u * 4u * defaultWallTexture.m_Height + 64u * 4u + 1];
+            m_CurrSectorB = defaultWallTexture.m_pData[64u * 4u * defaultWallTexture.m_Height + 64u * 4u + 2];
+            // END DEMO CODE
+
             const KDRData::FlatSurface &currentSurface = currentSurfaces[i];
 
             // Jump to start of the drawable part of the surface
@@ -179,14 +203,14 @@ void FlatSurfacesRenderer::Render()
 
 void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData::FlatSurface &iSurface)
 {
-    int maxColorRange = 150;
+    int maxColorRange = 160;
 
     char r = 1;  // iSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
     char g = 1; // iSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
     char b = 1; // iSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
 
     CType dist = -1;
-    int color;
+    int light;
 
     if (m_DistYCache[iY] >= 0)
         dist = m_DistYCache[iY];
@@ -206,12 +230,12 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
 
     if (dist >= 0)
     {
-        color = ((m_Settings.m_MaxColorInterpolationDist - dist) * maxColorRange) / m_Settings.m_MaxColorInterpolationDist;
-        color = std::max(45, color);
+        light = ((m_Settings.m_MaxColorInterpolationDist - dist) * maxColorRange) / m_Settings.m_MaxColorInterpolationDist;
+        light = std::max(45, light);;
 
         for (int x = iMinX; x <= iMaxX; x++)
         {
-            WriteFrameBuffer((WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH + x, color * r, color * g, color * b);
+            WriteFrameBuffer((WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH + x, (light * m_CurrSectorR) >> 8u, (light * m_CurrSectorG) >> 8u, (light * m_CurrSectorB) >> 8u);
         }
     }
 }

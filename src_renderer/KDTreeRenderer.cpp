@@ -141,7 +141,7 @@ bool KDTreeRenderer::AddFlatSurface(const KDRData::FlatSurface &iFlatSurface)
 
 void KDTreeRenderer::RenderFlatSurfaces()
 {
-    FlatSurfacesRenderer flatRenderer(m_FlatSurfaces, m_State, m_Settings);
+    FlatSurfacesRenderer flatRenderer(m_FlatSurfaces, m_State, m_Settings, m_Map);
     flatRenderer.SetBuffers(m_pFrameBuffer, m_pHorizOcclusionBuffer, m_pTopOcclusionBuffer, m_pBottomOcclusionBuffer);
     flatRenderer.Render();
 }

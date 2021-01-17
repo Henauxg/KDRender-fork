@@ -116,17 +116,18 @@ void WallRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX, CType i
     oMinY = std::max<int>(oMinYUnclamped, m_pBottomOcclusionBuffer[iX]);
     oMaxY = std::min<int>(oMaxYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[iX]);
 
+    
+    // Affine mapping (nausea-inducing)
+    // CType texelX = (1 - oT) * m_MinTexelX + oT * m_MaxTexelX;
+    // Perspective correct
+    CType texelX = ((1 - oT) * (m_MinTexelX / m_MinDist) + oT * (m_MaxTexelX / m_MaxDist)) / ((1 - oT) / m_MinDist + oT / m_MaxDist);
+    // oTexelXClamped = static_cast<int>(Mod(texelX, CType(int(m_pTexture->m_Width))));
+    oTexelXClamped = texelX - ((texelX >> (7u + FP_SHIFT)) << (7u + FP_SHIFT));
+    oTexelXClamped = oTexelXClamped >= m_pTexture->m_Width ? m_pTexture->m_Width - 1 : oTexelXClamped;
+    oMinTexelY = ((iBottomZ + m_TexVOffset) * CType(int(m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+    oMaxTexelY = ((iTopZ + m_TexVOffset) * CType(int(m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
     if (m_pTexture && oMaxYUnclamped != oMinYUnclamped)
     {
-        // Affine mapping (nausea-inducing)
-        // CType texelX = (1 - oT) * m_MinTexelX + oT * m_MaxTexelX;
-        // Perspective correct
-        CType texelX = ((1 - oT) * (m_MinTexelX / m_MinDist) + oT * (m_MaxTexelX / m_MaxDist)) / ((1 - oT) / m_MinDist + oT / m_MaxDist);
-        // oTexelXClamped = static_cast<int>(Mod(texelX, CType(int(m_pTexture->m_Width))));
-        oTexelXClamped = texelX - ((texelX >> (7u + FP_SHIFT)) << (7u + FP_SHIFT));
-        oTexelXClamped = oTexelXClamped >= m_pTexture->m_Width ? m_pTexture->m_Width - 1 : oTexelXClamped;
-        oMinTexelY = ((iBottomZ + m_TexVOffset) * CType(int(m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
-        oMaxTexelY = ((iTopZ + m_TexVOffset) * CType(int(m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
         // Clamp
         CType tMin = (CType(oMinY) - CType(oMinYUnclamped)) / (CType(oMaxYUnclamped - oMinYUnclamped));
         CType minTexelYBackup = oMinTexelY;

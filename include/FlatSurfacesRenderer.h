@@ -9,7 +9,7 @@
 class FlatSurfacesRenderer
 {
 public:
-    FlatSurfacesRenderer(const std::map<CType, std::vector<KDRData::FlatSurface>> &iFlatSurfaces, const KDRData::State &iState, const KDRData::Settings &iSettings);
+    FlatSurfacesRenderer(const std::map<CType, std::vector<KDRData::FlatSurface>> &iFlatSurfaces, const KDRData::State &iState, const KDRData::Settings &iSettings, const KDTreeMap &iMap);
     virtual ~FlatSurfacesRenderer();
 
 public:
@@ -27,6 +27,7 @@ protected:
     const std::map<CType, std::vector<KDRData::FlatSurface>> &m_FlatSurfaces;
     const KDRData::State &m_State;
     const KDRData::Settings &m_Settings;
+    const KDTreeMap &m_Map;
 
     unsigned char *m_pFrameBuffer;
     unsigned char *m_pHorizOcclusionBuffer;
@@ -36,6 +37,11 @@ protected:
 // Cache
     int m_LinesXStart[WINDOW_HEIGHT];
     CType m_DistYCache[WINDOW_HEIGHT];
+
+// TODO textures
+    unsigned char m_CurrSectorR;
+    unsigned char m_CurrSectorG;
+    unsigned char m_CurrSectorB;
 };
 
 void FlatSurfacesRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigned char g, unsigned char b)

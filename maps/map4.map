@@ -25,6 +25,24 @@ texture
     path {maps/textures/w64b_2.png}
 }
 
+texture
+{
+    name {W65b1}
+    path {maps/textures/w65b_1.png}
+}
+
+texture
+{
+    name {Tp2}
+    path {maps/textures/tp2_2.png}
+}
+
+texture
+{
+    name {Tile}
+    path {maps/textures/tile.png}
+}
+
 sector
 {
     outline
@@ -56,6 +74,8 @@ sector
         ceiling {110}
         floor {30}
     }
+    
+    defaultWallTexture {Tp2}
 }
 
 sector
@@ -70,6 +90,8 @@ sector
         ceiling {95}
         floor {45}
     }
+    
+    defaultWallTexture {Tp2}
 }
 
 sector
@@ -84,13 +106,15 @@ sector
         ceiling {70}
         floor {60}
     }
+    
+    defaultWallTexture {Tp2}
 }
 
 sector
 {
     outline
     {
-        vertices {{-200, -200} {-200, -110} {-150, -110} {-150, -200}}
+        vertices {{-200, -200 {noTexture}} {-200, -110} {-150, -110} {-150, -200}}
     }
 
     elevation
@@ -98,6 +122,8 @@ sector
         ceiling {130}
         floor {-20}
     }
+    
+    defaultWallTexture {W65b1}
 }
 
 sector
@@ -200,7 +226,7 @@ sector
 {
     outline
     {
-        vertices {{450, -175} {450, -125} {460, -125} {460, -175}}
+        vertices {{450, -175 {noTexture}} {450, -125} {460, -125} {460, -175}}
     }
 
     elevation
@@ -208,13 +234,15 @@ sector
         ceiling {100}
         floor {90}
     }
+    
+    defaultWallTexture {W64b2}
 }
 
 sector
 {
     outline
     {
-        vertices {{450, -155} {450, -145} {460, -145} {460, -155}}
+        vertices {{450, -155 {noTexture}} {450, -145} {460, -145} {460, -155}}
     }
 
     elevation
@@ -222,13 +250,15 @@ sector
         ceiling {135}
         floor {75}
     }
+    
+    defaultWallTexture {W64b2}
 }
 
 sector
 {
     outline
     {
-        vertices {{-350, -145} {-350, -165} {-335, -165} {-335, -145}}
+        vertices {{-350, -145 {noTexture}} {-350, -165} {-335, -165} {-335, -145}}
     }
 
     elevation
@@ -236,13 +266,15 @@ sector
         ceiling {120}
         floor {90}
     }
+    
+    defaultWallTexture {Tp2}
 }
 
 sector
 {
     outline
     {
-        vertices {{-350, -150} {-350, -160} {-340, -160} {-340, -150}}
+        vertices {{-350, -150 {noTexture}} {-350, -160} {-340, -160} {-340, -150}}
     }
 
     elevation
@@ -250,13 +282,15 @@ sector
         ceiling {120}
         floor {70}
     }
+    
+    defaultWallTexture {Tp2}
 }
 
 sector
 {
     outline
     {
-        vertices {{-350, -190} {-350, -120} {-360, -120} {-360, -190}}
+        vertices {{-350, -190 {noTexture}} {-350, -120} {-360, -120} {-360, -190}}
     }
 
     elevation
@@ -264,6 +298,8 @@ sector
         ceiling {110}
         floor {100}
     }
+    
+    defaultWallTexture {Camo}
 }
 
 sector
@@ -278,6 +314,8 @@ sector
         ceiling {25}
         floor {15}
     }
+    
+    defaultWallTexture {Camo}
 }
 
 sector
@@ -292,6 +330,8 @@ sector
         ceiling {140}
         floor {130}
     }
+    
+    defaultWallTexture {Tile}
 }
 
 sector
@@ -306,4 +346,6 @@ sector
         ceiling {145}
         floor {10}
     }
+    
+    defaultWallTexture {Tile}
 }

@@ -258,10 +258,7 @@ inline double Mod<double>(const double &iVal, const double &iDiv)
 template <>
 inline FP32<FP_SHIFT> Mod<FP32<FP_SHIFT>>(const FP32<FP_SHIFT> &iVal, const FP32<FP_SHIFT> &iDiv)
 {
-    if(iVal >= 0)
-        return iVal - (static_cast<int>(iVal / iDiv) * iDiv);
-    else
-        return iDiv + iVal - ((static_cast<int>(iVal / iDiv) + 1) * iDiv);
+    return iVal - (static_cast<int>(iVal / iDiv) * iDiv);
 }
 
 #endif

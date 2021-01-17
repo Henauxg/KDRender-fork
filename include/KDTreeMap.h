@@ -144,6 +144,7 @@ private:
     friend class KDTreeBuilder;
     friend class KDTreeRenderer;
     friend class WallRenderer;
+    friend class FlatSurfacesRenderer;
 };
 
 #endif
