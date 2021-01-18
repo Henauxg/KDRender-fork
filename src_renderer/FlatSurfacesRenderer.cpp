@@ -101,37 +101,26 @@ void FlatSurfacesRenderer::Render()
         for (unsigned int i = 0; i < currentSurfaces.size(); i++)
         {
             // TODO textures
-            // DEMO CODE
-            int sectorIdx = currentSurfaces[i].m_SectorIdx;
-            int texIdx = 0;
-            if (sectorIdx == 10 || sectorIdx == 15)
-                texIdx = 1;
-            if (sectorIdx == 5 || sectorIdx == 11 || sectorIdx == 12)
-                texIdx = 2;
-            if (sectorIdx == 4)
-                texIdx = 3;
-            if (sectorIdx == 13 || sectorIdx == 14)
-                texIdx = 2;
-            if (sectorIdx == 1 || sectorIdx == 2 || sectorIdx == 3)
-                texIdx = 4;
-            if (sectorIdx == 17 || sectorIdx == 18)
-                texIdx = 4;
+            m_CurrSectorR = 255;
+            m_CurrSectorG = 255;
+            m_CurrSectorB = 255;
+            if(currentSurfaces[i].m_TexId != -1)
+            {
+                unsigned int hIdx = m_Map.m_Textures[currentSurfaces[i].m_TexId].m_Height;
+                unsigned int wIdx = m_Map.m_Textures[currentSurfaces[i].m_TexId].m_Width;
 
-            const KDMapData::Texture &defaultWallTexture = m_Map.m_Textures[texIdx];
-            m_CurrSectorR = defaultWallTexture.m_pData[64u * 4u * defaultWallTexture.m_Height + 64u * 4u + 0];
-            m_CurrSectorG = defaultWallTexture.m_pData[64u * 4u * defaultWallTexture.m_Height + 64u * 4u + 1];
-            m_CurrSectorB = defaultWallTexture.m_pData[64u * 4u * defaultWallTexture.m_Height + 64u * 4u + 2];
-            // END DEMO CODE
+                m_CurrSectorR = m_Map.m_Textures[currentSurfaces[i].m_TexId].m_pData[(1u << (hIdx + wIdx + 1u)) + 0];
+                m_CurrSectorG = m_Map.m_Textures[currentSurfaces[i].m_TexId].m_pData[(1u << (hIdx + wIdx + 1u)) + 1];
+                m_CurrSectorB = m_Map.m_Textures[currentSurfaces[i].m_TexId].m_pData[(1u << (hIdx + wIdx + 1u)) + 2];
+            }
 
             const KDRData::FlatSurface &currentSurface = currentSurfaces[i];
 
             // Jump to start of the drawable part of the surface
             int minXDrawable = currentSurface.m_MinX;
-            for (; currentSurface.m_MinY[minXDrawable] > currentSurface.m_MaxY[minXDrawable]; minXDrawable++)
-                ;
+            for (; currentSurface.m_MinY[minXDrawable] > currentSurface.m_MaxY[minXDrawable]; minXDrawable++);
             int maxXDrawable = currentSurface.m_MaxX;
-            for (; currentSurface.m_MinY[maxXDrawable] > currentSurface.m_MaxY[maxXDrawable]; maxXDrawable--)
-                ;
+            for (; currentSurface.m_MinY[maxXDrawable] > currentSurface.m_MaxY[maxXDrawable]; maxXDrawable--);
 
             for (int y = currentSurface.m_MinY[minXDrawable]; y <= currentSurface.m_MaxY[minXDrawable]; y++)
             {
@@ -151,8 +140,7 @@ void FlatSurfacesRenderer::Render()
                     }
 
                     // Jump to next drawable part of the surface
-                    for (; x + 1 <= maxXDrawable && currentSurface.m_MinY[x + 1] > currentSurface.m_MaxY[x + 1]; x++)
-                        ;
+                    for (; x + 1 <= maxXDrawable && currentSurface.m_MinY[x + 1] > currentSurface.m_MaxY[x + 1]; x++);
 
                     for (int y = currentSurface.m_MinY[x]; y <= currentSurface.m_MaxY[x]; y++)
                         m_LinesXStart[y] = x;

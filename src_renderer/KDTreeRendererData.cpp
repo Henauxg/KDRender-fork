@@ -17,7 +17,8 @@ KDRData::FlatSurface::FlatSurface(const FlatSurface &iOther) :
     m_MinX(iOther.m_MinX),
     m_MaxX(iOther.m_MaxX),
     m_Height(iOther.m_Height),
-    m_SectorIdx(iOther.m_SectorIdx)
+    m_SectorIdx(iOther.m_SectorIdx),
+    m_TexId(iOther.m_TexId)
 {
     memcpy(m_MinY, iOther.m_MinY, sizeof(int) * WINDOW_WIDTH);
     memcpy(m_MaxY, iOther.m_MaxY, sizeof(int) * WINDOW_WIDTH);

@@ -31,6 +31,8 @@ KDBData::Error KDTreeBuilder::BuildSectors(const Map &iMap)
         }
         sector.m_Ceiling = pMapData->m_Sectors[i].m_Ceiling;
         sector.m_Floor = pMapData->m_Sectors[i].m_Floor;
+        sector.m_CeilingTexId = pMapData->m_Sectors[i].m_CeilingTexId;
+        sector.m_FloorTexId = pMapData->m_Sectors[i].m_FloorTexId;
 
         m_Sectors.push_back(sector);
     }
@@ -249,6 +251,8 @@ KDBData::Error KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
                     KDMapData::Sector sector;
                     sector.ceiling = m_Sectors[i].m_Ceiling;
                     sector.floor = m_Sectors[i].m_Floor;
+                    sector.ceilingTexId = m_Sectors[i].m_CeilingTexId;
+                    sector.floorTexId = m_Sectors[i].m_FloorTexId;
                     oKDTree->m_Sectors.push_back(sector);
                 }
 

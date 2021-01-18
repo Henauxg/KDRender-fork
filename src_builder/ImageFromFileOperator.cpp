@@ -24,7 +24,7 @@ void ImageFromFileOperator::SetRelativePath(const std::string &iPath)
     m_RelativePath = iPath;
 }
 
-KDBData::Error ImageFromFileOperator::Run()
+KDBData::Error ImageFromFileOperator::Run(bool iIsTexture)
 {
     // Reset prior runs (if any)
     if (m_pData)
@@ -34,10 +34,12 @@ KDBData::Error ImageFromFileOperator::Run()
     KDBData::Error ret = KDBData::Error::OK;
 
     sf::Image image;
-    if (image.loadFromFile(m_RelativePath))
+    if (image.loadFromFile(m_RelativePath) &&
+        image.getSize().x > 0 && image.getSize().y > 0)
     {
         m_Height = image.getSize().y;
         m_Width = image.getSize().x;
+
         m_pData = new unsigned char[sizeof(uint32_t) * m_Width * m_Height];
         if(m_pData)
         {
@@ -58,6 +60,19 @@ KDBData::Error ImageFromFileOperator::Run()
         }
         else
             ret = KDBData::Error::UNKNOWN_FAILURE;
+
+        if (iIsTexture)
+        {
+            unsigned int heightLog2 = 0;
+            while (m_Height = m_Height >> 1u)
+                heightLog2++;
+            m_Height = heightLog2;
+
+            unsigned int widthLog2 = 0;
+            while (m_Width = m_Width >> 1u)
+                widthLog2++;
+            m_Width = widthLog2;
+        }
     }
     else
         ret = KDBData::Error::CANNOT_LOAD_TEXTURE;

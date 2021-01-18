@@ -121,11 +121,10 @@ void WallRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX, CType i
     // CType texelX = (1 - oT) * m_MinTexelX + oT * m_MaxTexelX;
     // Perspective correct
     CType texelX = ((1 - oT) * (m_MinTexelX / m_MinDist) + oT * (m_MaxTexelX / m_MaxDist)) / ((1 - oT) / m_MinDist + oT / m_MaxDist);
-    // oTexelXClamped = static_cast<int>(Mod(texelX, CType(int(m_pTexture->m_Width))));
-    oTexelXClamped = texelX - ((texelX >> (7u + FP_SHIFT)) << (7u + FP_SHIFT));
-    oTexelXClamped = oTexelXClamped >= m_pTexture->m_Width ? m_pTexture->m_Width - 1 : oTexelXClamped;
-    oMinTexelY = ((iBottomZ + m_TexVOffset) * CType(int(m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
-    oMaxTexelY = ((iTopZ + m_TexVOffset) * CType(int(m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+    unsigned int xModShift = m_pTexture->m_Width + FP_SHIFT;
+    oTexelXClamped = texelX - ((texelX >> xModShift) << xModShift);
+    oMinTexelY = ((iBottomZ + m_TexVOffset) * CType(int(1u << m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+    oMaxTexelY = ((iTopZ + m_TexVOffset) * CType(int(1u << m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
     if (m_pTexture && oMaxYUnclamped != oMinYUnclamped)
     {
         // Clamp
@@ -154,21 +153,27 @@ void WallRenderer::RenderColumnWithTexture(CType iT, int iMinVertexLight, int iM
                                            int iTexelXClamped, CType iMinTexelY, CType iMaxTexelY)
 {
     int light = (iMinVertexLight * (1 - iT)) + iT * iMaxVertexLight;
-    CType tY, texelY;
+    CType tY, texelY = iMinTexelY;
     int texelYClamped;
+
+    // Need a little more precision to compute deltaTexelY
     CType invMinMaxYRange = iMaxY == iMinY ? CType(1 << 7u) : (1 << 7u) / CType(iMaxY - iMinY);
+    CType deltaTexelY = ((iMaxTexelY - iMinTexelY) * invMinMaxYRange) >> 7u;
+
+    unsigned int yModShift = m_pTexture->m_Height + FP_SHIFT;
+    unsigned int textureIdxX = (iTexelXClamped * (1u << m_pTexture->m_Height)) << 2u;
+    unsigned int textureIdxY;
     for (unsigned int y = iMinY; y <= iMaxY; y++)
     {
-        tY = (CType(int(y)) - iMinY) * invMinMaxYRange >> 7u;
-        texelY = (1 - tY) * iMinTexelY + tY * iMaxTexelY;
-        // texelYClamped = static_cast<int>(Mod(texelY, CType(int(m_pTexture->m_Height))));
-        texelYClamped = texelY - ((texelY >> (7u + FP_SHIFT)) << (7u + FP_SHIFT));
-        texelYClamped = texelYClamped >= m_pTexture->m_Height ? m_pTexture->m_Height - 1 : texelYClamped;
+        texelY = texelY + deltaTexelY;
+        texelYClamped = texelY - ((texelY >> yModShift) << (yModShift));
+        textureIdxY = textureIdxX + (texelYClamped << 2u);
 
-        unsigned char r = m_pTexture->m_pData[iTexelXClamped * m_pTexture->m_Height * 4u + texelYClamped * 4u + 0];
-        unsigned char g = m_pTexture->m_pData[iTexelXClamped * m_pTexture->m_Height * 4u + texelYClamped * 4u + 1];
-        unsigned char b = m_pTexture->m_pData[iTexelXClamped * m_pTexture->m_Height * 4u + texelYClamped * 4u + 2];
+        unsigned char r = m_pTexture->m_pData[textureIdxY];
+        unsigned char g = m_pTexture->m_pData[textureIdxY + 1];
+        unsigned char b = m_pTexture->m_pData[textureIdxY + 2];
 
+        // TODO: get rid of integer multiplications (way too expensive), use offsets instead
         WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + iX, (light * r) >> 8u, (light * g) >> 8u, (light * b) >> 8u);
     }
 }

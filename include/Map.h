@@ -32,8 +32,12 @@ public:
 
             Polygon m_Outline;
             std::vector<Polygon> m_Holes;
+            
             int m_Floor;
             int m_Ceiling;
+
+            int m_FloorTexId;
+            int m_CeilingTexId;
         };
 
         struct Texture

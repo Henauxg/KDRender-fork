@@ -84,6 +84,9 @@ namespace KDBData
         int m_Ceiling;
         int m_Floor;
 
+        int m_CeilingTexId;
+        int m_FloorTexId;
+
         enum class Relationship
         {
             INSIDE,

@@ -49,6 +49,7 @@ namespace KDRData
 
         CType m_Height;
         int m_SectorIdx;
+        int m_TexId;
     };
 
     struct Settings

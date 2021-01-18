@@ -26,6 +26,8 @@ namespace
         void PushNewSector()
         {
             m_Data.m_Sectors.push_back(Map::Data::Sector());
+            m_Data.m_Sectors.back().m_FloorTexId = -1;
+            m_Data.m_Sectors.back().m_CeilingTexId = -1;
         }
 
         void EndNewSector()
@@ -59,6 +61,20 @@ namespace
                 m_CurrentSectorDefaultWallTexId = found->second;
             else // Texture wasn't found
                 m_CurrentSectorDefaultWallTexId = -1;
+        }
+
+        void SetFloorTexture(std::string &iName)
+        {
+            auto found = m_MapTextureToTexId.find(iName);
+            if (found != m_MapTextureToTexId.end())
+                m_Data.m_Sectors.back().m_FloorTexId = found->second;
+        }
+
+        void SetCeilingTexture(std::string &iName)
+        {
+            auto found = m_MapTextureToTexId.find(iName);
+            if (found != m_MapTextureToTexId.end())
+                m_Data.m_Sectors.back().m_CeilingTexId = found->second;
         }
 
         void SetSectorCeiling(int iCeiling)
@@ -145,7 +161,7 @@ namespace
 
         std::map<std::string, int> m_MapTextureToTexId;
         int m_CurrentSectorDefaultWallTexId;
-        
+
         Map::Data::Sector::Vertex m_CurrentVertex;
     };
 
@@ -188,7 +204,9 @@ namespace
                     *(hole | 
                     outline | 
                     elevation |
-                    defaultWallTexture) >> 
+                    defaultWallTexture |
+                    ceilingTexture |
+                    floorTexture) >> 
                     closeBracket [boost::bind(&ExpressionAccumulator::EndNewSector, &iAccumulator)]
                 ;
 
@@ -239,6 +257,20 @@ namespace
                 "defaultWallTexture" >>
                 openBracket >>
                 bracketedString [boost::bind(&ExpressionAccumulator::SetDefaultWallTexture, &iAccumulator, _1)]>>
+                closeBracket
+                ;
+
+            floorTexture =
+                "floorTexture" >>
+                openBracket >>
+                bracketedString [boost::bind(&ExpressionAccumulator::SetFloorTexture, &iAccumulator, _1)]>>
+                closeBracket
+                ;
+
+            ceilingTexture =
+                "ceilingTexture" >>
+                openBracket >>
+                bracketedString [boost::bind(&ExpressionAccumulator::SetCeilingTexture, &iAccumulator, _1)]>>
                 closeBracket
                 ;
 
@@ -321,6 +353,8 @@ namespace
         qi::rule<Iterator, int(), ascii::space_type> floor;
         qi::rule<Iterator, int(), ascii::space_type> ceiling;
         qi::rule<Iterator, ascii::space_type> defaultWallTexture;
+        qi::rule<Iterator, ascii::space_type> floorTexture;
+        qi::rule<Iterator, ascii::space_type> ceilingTexture;
 
         qi::rule<Iterator, ascii::space_type> openBracket, closeBracket;
         qi::rule<Iterator, ascii::space_type> vertex;

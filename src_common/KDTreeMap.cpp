@@ -197,7 +197,7 @@ void KDTreeMap::Stream(char *&oData, unsigned int &oSize) const
             *(reinterpret_cast<unsigned int *>(pData)) = m_Textures[i].m_Width;
             pData += sizeof(unsigned int);
 
-            unsigned int length = sizeof(uint32_t) * m_Textures[i].m_Height * m_Textures[i].m_Width;
+            unsigned int length = sizeof(uint32_t) * (1u << (m_Textures[i].m_Height + m_Textures[i].m_Width));
             if(length)
             {
                 memcpy(pData, m_Textures[i].m_pData, length);
@@ -252,7 +252,7 @@ void KDTreeMap::UnStream(const char *iData, unsigned int &oNbBytesRead)
         iData += sizeof(int);
 
         texture.m_pData = nullptr;
-        unsigned int length = sizeof(uint32_t) * texture.m_Width * texture.m_Height;
+        unsigned int length = sizeof(uint32_t) * (1u << (texture.m_Width + texture.m_Height));
         if(length)
         {
             texture.m_pData = new unsigned char[length];
@@ -298,7 +298,7 @@ unsigned int KDTreeMap::ComputeStreamSize() const
     for(unsigned int i = 0; i < m_Textures.size(); i++)
     {
         streamSize +=  2 * sizeof(unsigned int); // m_Height and m_Width
-        streamSize += m_Textures[i].m_Height * m_Textures[i].m_Width * sizeof(uint32_t); // RGBA assumed
+        streamSize += (1u << (m_Textures[i].m_Height + m_Textures[i].m_Width)) * sizeof(uint32_t); // RGBA assumed
     }
 
     streamSize += sizeof(unsigned int); // m_Sectors.size()

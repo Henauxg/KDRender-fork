@@ -155,13 +155,13 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
     {
         if (m_MinVertex.m_Y == m_MaxVertex.m_Y)
         {
-            m_MinTexelX = ((m_MinVertex.m_X + m_TexUOffset) * CType(int(m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
-            m_MaxTexelX = ((m_MaxVertex.m_X + m_TexUOffset) * CType(int(m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+            m_MinTexelX = ((m_MinVertex.m_X + m_TexUOffset) * CType(int(1u << m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+            m_MaxTexelX = ((m_MaxVertex.m_X + m_TexUOffset) * CType(int(1u << m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
         }
         else
         {
-            m_MinTexelX = ((m_MinVertex.m_Y + m_TexUOffset) * CType(int(m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
-            m_MaxTexelX = ((m_MaxVertex.m_Y + m_TexUOffset) * CType(int(m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+            m_MinTexelX = ((m_MinVertex.m_Y + m_TexUOffset) * CType(int(1u << m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
+            m_MaxTexelX = ((m_MaxVertex.m_Y + m_TexUOffset) * CType(int(1u << m_pTexture->m_Width)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
         }
     }
     else
@@ -245,9 +245,11 @@ void WallRenderer::RenderHardWall(std::vector<KDRData::FlatSurface> &oGeneratedF
     floorSurface.m_MinX = m_MinX;
     floorSurface.m_MaxX = m_maxX;
     floorSurface.m_SectorIdx = m_InSectorIdx;
+    floorSurface.m_TexId = m_InSector.m_pKDSector->floorTexId;
     floorSurface.m_Height = m_InSector.m_Floor;
 
     KDRData::FlatSurface ceilingSurface(floorSurface);
+    ceilingSurface.m_TexId = m_InSector.m_pKDSector->ceilingTexId;
     ceilingSurface.m_Height = m_InSector.m_Ceiling;
 
     bool addFloorSurface = false;
@@ -320,6 +322,7 @@ void WallRenderer::RenderSoftWallTop(std::vector<KDRData::FlatSurface> &oGenerat
     ceilingSurface.m_MinX = m_MinX;
     ceilingSurface.m_MaxX = m_maxX;
     ceilingSurface.m_SectorIdx = m_WhichSide > 0 ? m_InSectorIdx : m_OutSectorIdx;
+    ceilingSurface.m_TexId = m_WhichSide > 0 ? m_InSector.m_pKDSector->ceilingTexId : m_OutSector.m_pKDSector->ceilingTexId;
     ceilingSurface.m_Height = m_WhichSide > 0 ? m_InSector.m_Ceiling : m_OutSector.m_Ceiling;
 
     bool wallIsVisible = (m_WhichSide > 0 && m_InSector.m_Ceiling > m_OutSector.m_Ceiling) ||
@@ -393,6 +396,7 @@ void WallRenderer::RenderSoftWallBottom(std::vector<KDRData::FlatSurface> &oGene
     floorSurface.m_MinX = m_MinX;
     floorSurface.m_MaxX = m_maxX;
     floorSurface.m_SectorIdx = m_WhichSide > 0 ? m_InSectorIdx : m_OutSectorIdx;
+    floorSurface.m_TexId = m_WhichSide > 0 ? m_InSector.m_pKDSector->floorTexId : m_OutSector.m_pKDSector->floorTexId;
     floorSurface.m_Height = m_WhichSide > 0 ? m_InSector.m_Floor : m_OutSector.m_Floor;
 
     bool wallIsVisible = (m_WhichSide > 0 && m_InSector.m_Floor < m_OutSector.m_Floor) ||

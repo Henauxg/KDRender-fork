@@ -160,8 +160,8 @@ int main(int argc, char **argv)
                     if (sf::Keyboard::isKeyPressed(sf::Keyboard::S))
                     {
                         std::cout << "Dumping player info:" << std::endl;
-                        std::cout << "x = " << playerPos.m_X << std::endl;
-                        std::cout << "y = " << playerPos.m_Y << std::endl;
+                        std::cout << "x = " << playerPos.m_X * POSITION_SCALE << std::endl;
+                        std::cout << "y = " << playerPos.m_Y * POSITION_SCALE << std::endl;
                         std::cout << "dir = " << playerDir << " (= " << static_cast<float>(playerDir) / (1 << ANGLE_SHIFT) << " degres)" << std::endl;
                     }
                     break;
@@ -181,7 +181,8 @@ int main(int argc, char **argv)
         //     deltaT += (float)(clock.getElapsedTime().asMilliseconds());
         // }
 
-        std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+        if (1000.f / deltaT < 60.f)
+            std::cout << "FPS = " << 1000.f / deltaT << std::endl;
 
         CType dPos = ((directionFront + directionBack) * dr * static_cast<CType>(deltaT)) / 1000;
         CType dPosOrtho = ((directionStrafeLeft + directionStrafeRight) * dr * static_cast<CType>(deltaT)) / 1000;

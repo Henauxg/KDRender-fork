@@ -11,6 +11,9 @@ namespace KDMapData
     {
         int floor;
         int ceiling;
+
+        int floorTexId;
+        int ceilingTexId;
     };
 
     struct Vertex
@@ -41,8 +44,8 @@ namespace KDMapData
 
     struct Texture
     {
-        unsigned int m_Height;
-        unsigned int m_Width;
+        unsigned int m_Height; // Height as a power of 2, in order to shift
+        unsigned int m_Width; // Same
         unsigned char *m_pData; // RGBA assumed
     };
 }

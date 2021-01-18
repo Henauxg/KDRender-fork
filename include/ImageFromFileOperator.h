@@ -15,7 +15,8 @@ public:
     void SetRelativePath(const std::string &iPath);
     
 public:
-    KDBData::Error Run();
+    // If iIsTexture, height and width will be stored as a power of two
+    KDBData::Error Run(bool iIsTexture = true);
 
 public:
     unsigned int GetHeight() const;
