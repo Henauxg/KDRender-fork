@@ -1,5 +1,5 @@
 CXX = g++
-CXXFLAGS = -W -Wall -std=c++11 -O3 -I./include -I.
+CXXFLAGS = -W -Wall -std=c++17 -O3 -I./include -I.
 LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-system
  
 COMMONSRCFILES=$(wildcard src_common/*.cpp) $(wildcard src_common/*/*.cpp)
