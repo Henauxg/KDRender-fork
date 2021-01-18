@@ -1,24 +1,44 @@
 CXX = g++
 CXXFLAGS = -W -Wall -std=c++11 -O3 -I./include -I.
-LDFLAGS = 
+LDFLAGS = -lsfml-graphics -lsfml-window -lsfml-system
  
 COMMONSRCFILES=$(wildcard src_common/*.cpp) $(wildcard src_common/*/*.cpp)
 BUILDERSRCFILES=$(wildcard src_builder/*.cpp) $(wildcard src_builder/*/*.cpp)
 RENDERERSRCFILES=$(wildcard src_renderer/*.cpp) $(wildcard src_renderer/*/*.cpp)
 ALLSRCFILES=$(COMMONSRCFILES) $(BUILDERSRCFILES) $(RENDERERSRCFILES)
 
-CPPFILES=$(COMMONSRCFILES:src_common/%=%) $(BUILDERSRCFILES:src_builder/%=%) $(RENDERERSRCFILES:src_builder/%=%)
-OBJS=$(CPPFILES:%.cpp=obj/%.o)
+CPPFILESBUILDER=$(COMMONSRCFILES:src_common/%=%) $(BUILDERSRCFILES:src_builder/%=%)
+CPPFILESRENDERER=$(COMMONSRCFILES:src_common/%=%) $(RENDERERSRCFILES:src_renderer/%=%)
 
+OBJSBUILDER=$(CPPFILESBUILDER:%.cpp=obj/%.o)
+OBJSRENDERER=$(CPPFILESRENDERER:%.cpp=obj/%.o)
+
+ECECRENDERER=maprenderer
 EXECBUILDER=mapbuilder
- 
+
+all : builder renderer
+
+renderer : bin/$(ECECRENDERER) 
+
 builder : bin/$(EXECBUILDER) 
- 
-bin/mapbuilder : $(OBJS)
+
+bin/maprenderer : $(OBJSRENDERER)
 	mkdir -p ./bin
-	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS) -L$(SFML_PATH)/lib
+	$(CXX) -o $@ $^ $(LDFLAGS) 
+ 
+bin/mapbuilder : $(OBJSBUILDER)
+	mkdir -p ./bin
+	$(CXX) -o $@ $^ $(LDFLAGS) 
 	
-obj/%.o : src_common/%.cpp src_builder/%.cpp src_renderer/%.cpp
+obj/%.o : src_common/%.cpp
+	mkdir -p ./obj
+	$(CXX) $(CXXFLAGS) -o $@ -c $<
+	
+obj/%.o : src_builder/%.cpp
+	mkdir -p ./obj
+	$(CXX) $(CXXFLAGS) -o $@ -c $<
+	
+obj/%.o : src_renderer/%.cpp
 	mkdir -p ./obj
 	$(CXX) $(CXXFLAGS) -o $@ -c $<
 	
@@ -28,5 +48,3 @@ clean :
 cleaner : clean
 	@rm bin/$(EXECBUILDER)
 
-run: bin/$(EXECBUILDER)
-	export LD_LIBRARY_PATH=$(SFML_PATH)/lib ; bin/$(EXEC)

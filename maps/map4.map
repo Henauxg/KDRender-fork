@@ -2,8 +2,8 @@ player
 {
     start
     {
-        position {41, 95}
-        direction {328}
+        position {10, 5}
+        direction {180}
     }
 }
 
