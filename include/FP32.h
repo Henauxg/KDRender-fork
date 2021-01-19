@@ -9,7 +9,7 @@
 
 // #define FP32_DEBUG_ENABLED
 
-#define FP_SHIFT 14
+#define FP_SHIFT 15
 
 #define FP32_HIGH(a, p) ((a) >> (p))
 

@@ -19,6 +19,7 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_Settings.m_MaxColorInterpolationDist = CType(500) / POSITION_SCALE;
     m_Settings.m_HorizontalDistortionCst = 1 / (2 * tanInt(m_Settings.m_PlayerHorizontalFOV / 2));
     m_Settings.m_VerticalDistortionCst = 1 / (2 * tanInt(m_Settings.m_PlayerVerticalFOV / 2));
+    m_Settings.m_NearPlane = CType(10) / POSITION_SCALE;
 
     memset(m_pFrameBuffer, 255u, sizeof(unsigned char) * 4u * WINDOW_HEIGHT * WINDOW_WIDTH);
     ClearBuffers();

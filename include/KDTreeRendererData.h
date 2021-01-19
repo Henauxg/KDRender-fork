@@ -60,6 +60,7 @@ namespace KDRData
         CType m_MaxColorInterpolationDist;
         CType m_HorizontalDistortionCst;
         CType m_VerticalDistortionCst;
+        CType m_NearPlane;
     };
 
     struct State
