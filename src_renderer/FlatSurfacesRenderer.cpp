@@ -204,26 +204,78 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
         dist = m_DistYCache[iY];
     else
     {
-        int theta = (m_Settings.m_PlayerVerticalFOV * (2 * iY - WINDOW_HEIGHT)) / (2 * WINDOW_HEIGHT);
-        CType sinTheta = sinInt(theta);
+        // CType foo = (CType(iY) / WINDOW_HEIGHT - CType(1)/CType(2)) / m_Settings.m_VerticalDistortionCst;
+        // int theta = (m_Settings.m_PlayerVerticalFOV * (2 * iY - WINDOW_HEIGHT)) / (2 * WINDOW_HEIGHT);
+        // CType sinTheta = sinInt(theta);
 
-        if (sinTheta != 0)
+        // if (sinTheta != 0)
+        // {
+        //     dist = (m_State.m_PlayerZ - iSurface.m_Height) / sinTheta;
+        //     dist = dist < 0 ? -dist : dist;
+        //     dist = std::min(dist, m_Settings.m_MaxColorInterpolationDist);
+        //     m_DistYCache[iY] = dist;
+        // }
+
+        if(iY != WINDOW_HEIGHT / 2)
         {
-            dist = (m_State.m_PlayerZ - iSurface.m_Height) / sinTheta;
+            dist = m_Settings.m_VerticalDistortionCst * ((m_State.m_PlayerZ - iSurface.m_Height) / (CType(iY) / WINDOW_HEIGHT - CType(1) / CType(2)));
             dist = dist < 0 ? -dist : dist;
-            dist = std::min(dist, m_Settings.m_MaxColorInterpolationDist);
-            m_DistYCache[iY] = dist;
         }
     }
 
     if (dist >= 0)
     {
         light = ((m_Settings.m_MaxColorInterpolationDist - dist) * maxColorRange) / m_Settings.m_MaxColorInterpolationDist;
-        light = std::max(45, light);;
+        light = Clamp(light, 45, maxColorRange);
 
-        for (int x = iMinX; x <= iMaxX; x++)
+        if (iSurface.m_TexId >= 0)
         {
-            WriteFrameBuffer((WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH + x, (light * m_CurrSectorR) >> 8u, (light * m_CurrSectorG) >> 8u, (light * m_CurrSectorB) >> 8u);
+            const KDMapData::Texture &texture = m_Map.m_Textures[iSurface.m_TexId];
+            CType length = dist / cosInt(m_Settings.m_PlayerHorizontalFOV / 2);
+
+            KDRData::Vertex leftmostTexel;
+            leftmostTexel.m_X = (m_State.m_FrustumToLeft.m_X - m_State.m_PlayerPosition.m_X) * length + m_State.m_PlayerPosition.m_X;
+            leftmostTexel.m_Y = (m_State.m_FrustumToLeft.m_Y - m_State.m_PlayerPosition.m_Y) * length + m_State.m_PlayerPosition.m_Y;
+
+            KDRData::Vertex rightmostTexel;
+            rightmostTexel.m_X = (m_State.m_FrustumToRight.m_X - m_State.m_PlayerPosition.m_X) * length + m_State.m_PlayerPosition.m_X;
+            rightmostTexel.m_Y = (m_State.m_FrustumToRight.m_Y - m_State.m_PlayerPosition.m_Y) * length + m_State.m_PlayerPosition.m_Y;
+
+            leftmostTexel.m_X = leftmostTexel.m_X * CType(int(1u << texture.m_Width)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
+            leftmostTexel.m_Y = leftmostTexel.m_Y * CType(int(1u << texture.m_Height)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
+
+            rightmostTexel.m_X = rightmostTexel.m_X * CType(int(1u << texture.m_Width)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
+            rightmostTexel.m_Y = rightmostTexel.m_Y * CType(int(1u << texture.m_Width)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
+
+            CType t = CType(iMinX) / CType(WINDOW_WIDTH);
+            CType currTexelX = (1 - t) * leftmostTexel.m_X + t * rightmostTexel.m_X;
+            CType currTexelY = (1 - t) * leftmostTexel.m_Y + t * rightmostTexel.m_Y;
+            CType deltaTexelX = (rightmostTexel.m_X - leftmostTexel.m_X) / CType(WINDOW_WIDTH);
+            CType deltaTexelY = (rightmostTexel.m_Y - leftmostTexel.m_Y) / CType(WINDOW_WIDTH);
+            unsigned int yModShift = texture.m_Height + FP_SHIFT;
+            unsigned int xModShift = texture.m_Width + FP_SHIFT;
+            int currTexelXClamped, currTexelYClamped;
+            unsigned int r, g, b;
+            for (int x = iMinX; x <= iMaxX; x++)
+            {
+                currTexelXClamped = currTexelX - ((currTexelX >> (xModShift)) << (xModShift));
+                currTexelYClamped = currTexelY - ((currTexelY >> (yModShift)) << (yModShift));
+
+                // (iTexelXClamped * (1u << m_pTexture->m_Height)) << 2u
+                r = texture.m_pData[((currTexelXClamped * (1u << texture.m_Height)) << 2u) + (currTexelYClamped << 2u) + 0];
+                g = texture.m_pData[((currTexelXClamped * (1u << texture.m_Height)) << 2u) + (currTexelYClamped << 2u) + 1];
+                b = texture.m_pData[((currTexelXClamped * (1u << texture.m_Height)) << 2u) + (currTexelYClamped << 2u) + 2];
+
+                WriteFrameBuffer((WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH + x, (light * r) >> 8u, (light * g) >> 8u, (light * b) >> 8u);
+
+                currTexelX = currTexelX + deltaTexelX;
+                currTexelY = currTexelY + deltaTexelY;
+            }
+        }
+        else
+        {
+            for (int x = iMinX; x <= iMaxX; x++)
+                WriteFrameBuffer((WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH + x, (light * m_CurrSectorR) >> 8u, (light * m_CurrSectorG) >> 8u, (light * m_CurrSectorB) >> 8u);
         }
     }
 }
