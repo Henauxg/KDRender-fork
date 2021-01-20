@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 
     sf::RenderWindow app(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT),
                          "KDTree Map Renderer",
-                         sf::Style::Close);
+                         sf::Style::Fullscreen);
 
     Screen screen(renderer);
     sf::Clock clock;
@@ -80,6 +80,8 @@ int main(int argc, char **argv)
 
     unsigned int poolEvent = 0;
 
+    double totalTime = 0.0;
+    int64_t frameCount = 0;
     while (app.isOpen())
     {
         sf::Event event;
@@ -172,6 +174,7 @@ int main(int argc, char **argv)
         }
 
         float deltaT = (float)(clock.getElapsedTime().asMilliseconds());
+        totalTime += deltaT;
         clock.restart();
 
         // 60 FPS cap
@@ -183,6 +186,8 @@ int main(int argc, char **argv)
 
         // if (1000.f / deltaT < 60.f)
             std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+
+        frameCount++;
 
         CType dPos = ((directionFront + directionBack) * dr * static_cast<CType>(deltaT)) / 1000;
         CType dPosOrtho = ((directionStrafeLeft + directionStrafeRight) * dr * static_cast<CType>(deltaT)) / 1000;
@@ -213,6 +218,10 @@ int main(int argc, char **argv)
         renderer.ClearBuffers();
         renderer.RefreshFrameBuffer();
     }
+
+    // Shitty average, should be weighted by time and not framecount
+    double averageFps = static_cast<double>(frameCount) / totalTime * 1000.0;
+    std::cout << "Average FPS = " << averageFps << std::endl;
 
     return 0;
 }

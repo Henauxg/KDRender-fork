@@ -1,12 +1,12 @@
 #ifndef Consts_h
 #define Consts_h
 
-#define WINDOW_WIDTH 1024
-#define WINDOW_HEIGHT 768
+#define WINDOW_WIDTH 1920
+#define WINDOW_HEIGHT 1080
 
 #define ANGLE_SHIFT 7
 #define POSITION_SCALE 64
-#define TEXEL_SCALE 32
+#define TEXEL_SCALE 64
 
 #define ARITHMETIC_SHIFT(nb, shift) ((nb) >> (shift))
 
