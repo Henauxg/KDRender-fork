@@ -13,13 +13,13 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_Map(iMap),
     m_pFrameBuffer(new unsigned char[WINDOW_HEIGHT * WINDOW_WIDTH * 4u])
 {
-    m_Settings.m_PlayerHorizontalFOV = 90 * (1 << ANGLE_SHIFT);
+    m_Settings.m_PlayerHorizontalFOV = 90 << ANGLE_SHIFT;
     m_Settings.m_PlayerVerticalFOV = (m_Settings.m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH;
     m_Settings.m_PlayerHeight = CType(30) / POSITION_SCALE;
     m_Settings.m_MaxColorInterpolationDist = CType(500) / POSITION_SCALE;
     m_Settings.m_HorizontalDistortionCst = 1 / (2 * tanInt(m_Settings.m_PlayerHorizontalFOV / 2));
     m_Settings.m_VerticalDistortionCst = 1 / (2 * tanInt(m_Settings.m_PlayerVerticalFOV / 2));
-    m_Settings.m_NearPlane = CType(10) / POSITION_SCALE;
+    m_Settings.m_NearPlane = CType(1) / POSITION_SCALE;
 
     memset(m_pFrameBuffer, 255u, sizeof(unsigned char) * 4u * WINDOW_HEIGHT * WINDOW_WIDTH);
     ClearBuffers();
@@ -65,9 +65,13 @@ void KDTreeRenderer::Render()
 {
     m_State.m_PlayerZ = ComputeZ();
 
+    // Compute states
     GetVector(m_State.m_PlayerPosition, m_State.m_PlayerDirection - m_Settings.m_PlayerHorizontalFOV / 2, m_State.m_FrustumToLeft);
     GetVector(m_State.m_PlayerPosition, m_State.m_PlayerDirection + m_Settings.m_PlayerHorizontalFOV / 2, m_State.m_FrustumToRight);
     GetVector(m_State.m_PlayerPosition, m_State.m_PlayerDirection, m_State.m_Look);
+    m_State.m_NearPlaneV1.m_X = m_State.m_PlayerPosition.m_X + (m_State.m_Look.m_X - m_State.m_PlayerPosition.m_X) * m_Settings.m_NearPlane;
+    m_State.m_NearPlaneV1.m_Y = m_State.m_PlayerPosition.m_Y + (m_State.m_Look.m_Y - m_State.m_PlayerPosition.m_Y) * m_Settings.m_NearPlane;
+    GetVector(m_State.m_NearPlaneV1, m_State.m_PlayerDirection + (90 << ANGLE_SHIFT), m_State.m_NearPlaneV2);
 
     RenderNode(m_Map.m_RootNode);
     RenderFlatSurfaces();
@@ -106,6 +110,30 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
         }
         else
         {
+            // First, clip against near plane
+            // If the wall is entirely behind the clipping plane, it has been rejected already
+            // if(vertexFromIsBehindNearPlane || vertexToIsBehindNearPlane)
+            // {
+            //     KDRData::Vertex intersectionVertex;
+            //     if (LineLineIntersection<KDRData::Vertex>(m_State.m_NearPlaneV1, m_State.m_NearPlaneV2, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
+            //     {
+            //         if (vertexFromIsBehindNearPlane)
+            //         {
+            //             if(wall.m_VertexFrom.m_X == wall.m_VertexTo.m_X)
+            //                 wall.m_VertexFrom.m_Y = intersectionVertex.m_Y;
+            //             else
+            //                 wall.m_VertexFrom.m_X = intersectionVertex.m_X;
+            //         }
+            //         else
+            //         {
+            //             if (wall.m_VertexFrom.m_X == wall.m_VertexTo.m_X)
+            //                 wall.m_VertexTo.m_Y = intersectionVertex.m_Y;
+            //             else
+            //                 wall.m_VertexTo.m_X = intersectionVertex.m_X;
+            //         }
+            //     }
+            // }
+
             std::vector<KDRData::FlatSurface> generatedFlats;
             WallRenderer wallRenderer(wall, m_State, m_Settings, m_Map);
             wallRenderer.SetBuffers(m_pFrameBuffer, m_pHorizOcclusionBuffer, m_pTopOcclusionBuffer, m_pBottomOcclusionBuffer);
@@ -216,10 +244,6 @@ void KDTreeRenderer::SetPlayerCoordinates(const KDRData::Vertex &iPosition, int 
 {
     m_State.m_PlayerPosition = iPosition;
     m_State.m_PlayerDirection = iDirection;
-
-    GetVector(m_State.m_PlayerPosition, m_State.m_PlayerDirection - m_Settings.m_PlayerHorizontalFOV / 2, m_State.m_FrustumToLeft);
-    GetVector(m_State.m_PlayerPosition, m_State.m_PlayerDirection + m_Settings.m_PlayerHorizontalFOV / 2, m_State.m_FrustumToRight);
-    GetVector(m_State.m_PlayerPosition, m_State.m_PlayerDirection, m_State.m_Look);
 }
 
 KDRData::Vertex KDTreeRenderer::GetPlayerPosition() const

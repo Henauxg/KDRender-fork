@@ -9,7 +9,7 @@
 
 // #define FP32_DEBUG_ENABLED
 
-#define FP_SHIFT 15
+#define FP_SHIFT 14
 
 #define FP32_HIGH(a, p) ((a) >> (p))
 
@@ -126,6 +126,12 @@ public:
     friend constexpr FP32<P> operator*(const FP32<P> &iN1, const int &iN2)
     {
         return FromFPVal((iN1.m_Val * iN2));
+    }
+
+    friend constexpr int32_t MultiplyIntFpToInt(int32_t iInt, const FP32<P> &iFP)
+    {
+        int64_t mul = static_cast<int64_t>(iFP.m_Val) * iInt;
+        return static_cast<int32_t>(mul >> FP_SHIFT);
     }
 
     friend constexpr FP32<P> operator*(const int &iN1, const FP32<P> &iN2)

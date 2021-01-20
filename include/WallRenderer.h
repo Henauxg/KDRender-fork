@@ -111,8 +111,8 @@ void WallRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX, CType i
     oT = iMaxX == iMinX ? CType(0) : (static_cast<CType>(iX - iMinX) * iInvMinMaxXRange) >> 7u;
     // oT = iMaxX == iMinX ? CType(0) : (static_cast<CType>(iX - iMinX) * iInvMinMaxXRange) / (1 << 7u); // For float/double
 
-    oMinYUnclamped = (1 - oT) * iMinVertexBottomPixel + oT * iMaxVertexBottomPixel;
-    oMaxYUnclamped = (1 - oT) * iMinVertexTopPixel + oT * iMaxVertexTopPixel;
+    oMinYUnclamped = MultiplyIntFpToInt(iMinVertexBottomPixel, 1 - oT) + MultiplyIntFpToInt(iMaxVertexBottomPixel, oT);
+    oMaxYUnclamped = MultiplyIntFpToInt(iMinVertexTopPixel, 1 - oT) + MultiplyIntFpToInt(iMaxVertexTopPixel, oT);
     oMinY = std::max<int>(oMinYUnclamped, m_pBottomOcclusionBuffer[iX]);
     oMaxY = std::min<int>(oMaxYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[iX]);
 

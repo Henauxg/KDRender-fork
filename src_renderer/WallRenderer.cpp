@@ -138,8 +138,8 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
     // int maxX = WINDOW_WIDTH / 2 + tanInt(maxAngle) / tanInt(m_PlayerHorizontalFOV / 2) * (WINDOW_WIDTH / 2);
 
     // Same as above but with little refacto
-    m_MinX = WINDOW_WIDTH / 2 + WINDOW_WIDTH * tanInt(m_MinAngle) * m_Settings.m_HorizontalDistortionCst;
-    m_maxX = WINDOW_WIDTH / 2 + WINDOW_WIDTH * tanInt(m_MaxAngle) * m_Settings.m_HorizontalDistortionCst;
+    m_MinX = WINDOW_WIDTH / 2 + MultiplyIntFpToInt(WINDOW_WIDTH, tanInt(m_MinAngle) * m_Settings.m_HorizontalDistortionCst);
+    m_maxX = WINDOW_WIDTH / 2 + MultiplyIntFpToInt(WINDOW_WIDTH, tanInt(m_MaxAngle) * m_Settings.m_HorizontalDistortionCst);
 
     if (m_MinX > m_maxX)
         return;
@@ -231,10 +231,10 @@ void WallRenderer::RenderHardWall(std::vector<KDRData::FlatSurface> &oGeneratedF
     // int maxVertexBottomPixel = ((-atanInt(eyeToBottom / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
     // int maxVertexTopPixel = ((atanInt(eyeToTop / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
-    int minVertexBottomPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * (eyeToBottom / m_MinDist) * m_Settings.m_VerticalDistortionCst;
-    int minVertexTopPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * (eyeToTop / m_MinDist) * m_Settings.m_VerticalDistortionCst;
-    int maxVertexBottomPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * (eyeToBottom / m_MaxDist) * m_Settings.m_VerticalDistortionCst;
-    int maxVertexTopPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * (eyeToTop / m_MaxDist) * m_Settings.m_VerticalDistortionCst;
+    int minVertexBottomPixel = WINDOW_HEIGHT / 2 - MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToBottom / m_MinDist) * m_Settings.m_VerticalDistortionCst));
+    int minVertexTopPixel = WINDOW_HEIGHT / 2 + MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToTop / m_MinDist) * m_Settings.m_VerticalDistortionCst));
+    int maxVertexBottomPixel = WINDOW_HEIGHT / 2 - MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToBottom / m_MaxDist) * m_Settings.m_VerticalDistortionCst));
+    int maxVertexTopPixel = WINDOW_HEIGHT / 2 + MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToTop / m_MaxDist) * m_Settings.m_VerticalDistortionCst));
 
     KDRData::FlatSurface floorSurface;
     floorSurface.m_MinX = m_MinX;
@@ -303,10 +303,10 @@ void WallRenderer::RenderSoftWallTop(std::vector<KDRData::FlatSurface> &oGenerat
     // int maxVertexBottomPixel = ((atanInt(eyeToBottomCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
     // int maxVertexTopPixel = ((atanInt(eyeToTopCeiling / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
-    int minVertexBottomPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * (eyeToBottomCeiling / m_MinDist) * m_Settings.m_VerticalDistortionCst;
-    int minVertexTopPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * (eyeToTopCeiling / m_MinDist) * m_Settings.m_VerticalDistortionCst;
-    int maxVertexBottomPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * (eyeToBottomCeiling / m_MaxDist) * m_Settings.m_VerticalDistortionCst;
-    int maxVertexTopPixel = WINDOW_HEIGHT / 2 + WINDOW_HEIGHT * (eyeToTopCeiling / m_MaxDist) * m_Settings.m_VerticalDistortionCst;
+    int minVertexBottomPixel = WINDOW_HEIGHT / 2 + MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToBottomCeiling / m_MinDist) * m_Settings.m_VerticalDistortionCst));
+    int minVertexTopPixel = WINDOW_HEIGHT / 2 + MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToTopCeiling / m_MinDist) * m_Settings.m_VerticalDistortionCst));
+    int maxVertexBottomPixel = WINDOW_HEIGHT / 2 + MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToBottomCeiling / m_MaxDist) * m_Settings.m_VerticalDistortionCst));
+    int maxVertexTopPixel = WINDOW_HEIGHT / 2 + MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToTopCeiling / m_MaxDist) * m_Settings.m_VerticalDistortionCst));
 
     KDRData::FlatSurface ceilingSurface;
     ceilingSurface.m_MinX = m_MinX;
@@ -372,15 +372,10 @@ void WallRenderer::RenderSoftWallBottom(std::vector<KDRData::FlatSurface> &oGene
     // int maxVertexBottomPixel = ((-atanInt(eyeToBottomFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
     // int maxVertexTopPixel = ((-atanInt(eyeToTopFloor / maxDist) + m_PlayerVerticalFOV / 2) * WINDOW_HEIGHT) / m_PlayerVerticalFOV;
 
-    int minAngleEyeToBottomFloor = atanInt(eyeToBottomFloor / m_MinDist);
-    int minAngleEyeToTopFloor = atanInt(eyeToTopFloor / m_MinDist);
-    int maxAngleEyeToBottomFloor = atanInt(eyeToBottomFloor / m_MaxDist);
-    int maxAngleEyeToTopFloor = atanInt(eyeToTopFloor / m_MaxDist);
-
-    int minVertexBottomPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * (eyeToBottomFloor / m_MinDist) * m_Settings.m_VerticalDistortionCst;
-    int minVertexTopPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * (eyeToTopFloor / m_MinDist) * m_Settings.m_VerticalDistortionCst;
-    int maxVertexBottomPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * (eyeToBottomFloor / m_MaxDist) * m_Settings.m_VerticalDistortionCst;
-    int maxVertexTopPixel = WINDOW_HEIGHT / 2 - WINDOW_HEIGHT * (eyeToTopFloor / m_MaxDist) * m_Settings.m_VerticalDistortionCst;
+    int minVertexBottomPixel = WINDOW_HEIGHT / 2 - MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToBottomFloor / m_MinDist) * m_Settings.m_VerticalDistortionCst));
+    int minVertexTopPixel = WINDOW_HEIGHT / 2 - MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToTopFloor / m_MinDist) * m_Settings.m_VerticalDistortionCst));
+    int maxVertexBottomPixel = WINDOW_HEIGHT / 2 - MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToBottomFloor / m_MaxDist) * m_Settings.m_VerticalDistortionCst));
+    int maxVertexTopPixel = WINDOW_HEIGHT / 2 - MultiplyIntFpToInt(WINDOW_HEIGHT, ((eyeToTopFloor / m_MaxDist) * m_Settings.m_VerticalDistortionCst));
 
     KDRData::FlatSurface floorSurface;
     floorSurface.m_MinX = m_MinX;

@@ -132,8 +132,6 @@ inline int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
 // Thanks to http://flassari.is/2008/11/line-line-intersection-in-cplusplus/ for writing
 // this boiler-plate piece of code for me
 // Note: this function returns false if lines are colinear, even if they are the same
-// TODO: raised default precision to 64-bit integers, which kind of sucks. Won't need to
-// to this anymore when we finally implement a clean fixed-point arithmetic API
 template <typename Vertex, typename Intermediate = CType>
 inline bool LineLineIntersection(const Vertex &iV1, const Vertex &iV2, const Vertex &iV3, const Vertex &iV4, Vertex &oIntersection)
 {
@@ -174,6 +172,25 @@ inline bool HalfLineSegmentIntersection(const Vertex &iHalfLineFrom, const Verte
             return false;
 
         if (DotProduct(iV2, oIntersection, iV2, iV1) < 0)
+            return false;
+
+        return true;
+    }
+}
+
+// As shitty as above
+// TODO: code a real intersection solver
+template <typename Vertex, typename Intermediate = CType>
+inline bool LineSegmentIntersection(const Vertex &iLineV1, const Vertex &iLineV2, const Vertex &iSegV1, const Vertex &iSegV2, Vertex &oIntersection)
+{
+    if (!LineLineIntersection<Vertex, Intermediate>(iLineV1, iLineV2, iSegV1, iSegV2, oIntersection))
+        return false;
+    else
+    {
+        if (DotProduct(iSegV1, oIntersection, iSegV1, iSegV2) < 0)
+            return false;
+
+        if (DotProduct(iLineV2, oIntersection, iSegV1, iSegV2) < 0)
             return false;
 
         return true;
