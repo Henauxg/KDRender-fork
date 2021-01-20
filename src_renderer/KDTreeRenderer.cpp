@@ -69,9 +69,9 @@ void KDTreeRenderer::Render()
     GetVector(m_State.m_PlayerPosition, m_State.m_PlayerDirection - m_Settings.m_PlayerHorizontalFOV / 2, m_State.m_FrustumToLeft);
     GetVector(m_State.m_PlayerPosition, m_State.m_PlayerDirection + m_Settings.m_PlayerHorizontalFOV / 2, m_State.m_FrustumToRight);
     GetVector(m_State.m_PlayerPosition, m_State.m_PlayerDirection, m_State.m_Look);
-    m_State.m_NearPlaneV1.m_X = m_State.m_PlayerPosition.m_X + (m_State.m_Look.m_X - m_State.m_PlayerPosition.m_X) * m_Settings.m_NearPlane;
-    m_State.m_NearPlaneV1.m_Y = m_State.m_PlayerPosition.m_Y + (m_State.m_Look.m_Y - m_State.m_PlayerPosition.m_Y) * m_Settings.m_NearPlane;
-    GetVector(m_State.m_NearPlaneV1, m_State.m_PlayerDirection + (90 << ANGLE_SHIFT), m_State.m_NearPlaneV2);
+    // m_State.m_NearPlaneV1.m_X = m_State.m_PlayerPosition.m_X + (m_State.m_Look.m_X - m_State.m_PlayerPosition.m_X) * m_Settings.m_NearPlane;
+    // m_State.m_NearPlaneV1.m_Y = m_State.m_PlayerPosition.m_Y + (m_State.m_Look.m_Y - m_State.m_PlayerPosition.m_Y) * m_Settings.m_NearPlane;
+    // GetVector(m_State.m_NearPlaneV1, m_State.m_PlayerDirection + (90 << ANGLE_SHIFT), m_State.m_NearPlaneV2);
 
     RenderNode(m_Map.m_RootNode);
     RenderFlatSurfaces();
