@@ -136,7 +136,7 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
     // Horizontal distortion correction
     // int minX = WINDOW_WIDTH / 2 + tanInt(minAngle) / tanInt(m_PlayerHorizontalFOV / 2) * (WINDOW_WIDTH / 2);
     // int maxX = WINDOW_WIDTH / 2 + tanInt(maxAngle) / tanInt(m_PlayerHorizontalFOV / 2) * (WINDOW_WIDTH / 2);
-
+    
     // Same as above but with little refacto
     m_MinX = WINDOW_WIDTH / 2 + MultiplyIntFpToInt(WINDOW_WIDTH, tanInt(m_MinAngle) * m_Settings.m_HorizontalDistortionCst);
     m_maxX = WINDOW_WIDTH / 2 + MultiplyIntFpToInt(WINDOW_WIDTH, tanInt(m_MaxAngle) * m_Settings.m_HorizontalDistortionCst);
@@ -195,6 +195,8 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
     m_MaxVertexColor = ((m_Settings.m_MaxColorInterpolationDist - m_MaxDist) * m_MaxColorRange) / m_Settings.m_MaxColorInterpolationDist;
     m_MinVertexColor = Clamp(m_MinVertexColor, m_MinColorClamp, m_MaxColorRange);
     m_MaxVertexColor = Clamp(m_MaxVertexColor, m_MinColorClamp, m_MaxColorRange);
+
+    m_YModShift = m_pTexture->m_Height + FP_SHIFT;
 
     if (m_OutSectorIdx == -1 && m_WhichSide > 0)
     {

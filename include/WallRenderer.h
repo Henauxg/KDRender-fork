@@ -85,10 +85,13 @@ protected:
     const KDMapData::Texture *m_pTexture;
     int m_TexUOffset;
     int m_TexVOffset;
+    unsigned int m_YModShift;
 
 protected:
     // Debug only
-    char r, g, b;
+    char r,
+        g,
+        b;
 };
 
 void WallRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigned char g, unsigned char b)
@@ -160,13 +163,12 @@ void WallRenderer::RenderColumnWithTexture(CType iT, int iMinVertexLight, int iM
     CType invMinMaxYRange = iMaxY == iMinY ? CType(1 << 7u) : (1 << 7u) / CType(iMaxY - iMinY);
     CType deltaTexelY = ((iMaxTexelY - iMinTexelY) * invMinMaxYRange) >> 7u;
 
-    unsigned int yModShift = m_pTexture->m_Height + FP_SHIFT;
     unsigned int textureIdxX = (iTexelXClamped * (1u << m_pTexture->m_Height)) << 2u;
     unsigned int textureIdxY;
     for (unsigned int y = iMinY; y <= iMaxY; y++)
     {
         texelY = texelY + deltaTexelY;
-        texelYClamped = texelY - ((texelY >> yModShift) << (yModShift));
+        texelYClamped = texelY - ((texelY >> (m_YModShift)) << (m_YModShift));
         textureIdxY = textureIdxX + (texelYClamped << 2u);
 
         unsigned char r = m_pTexture->m_pData[textureIdxY];
