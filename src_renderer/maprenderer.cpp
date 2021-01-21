@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 
     sf::RenderWindow app(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT),
                          "KDTree Map Renderer",
-                         sf::Style::Fullscreen);
+                         sf::Style::Close);
 
     Screen screen(renderer);
     sf::Clock clock;
@@ -185,7 +185,7 @@ int main(int argc, char **argv)
         // }
 
         // if (1000.f / deltaT < 60.f)
-            std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+            // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
 
         frameCount++;
 
