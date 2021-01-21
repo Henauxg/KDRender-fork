@@ -7,6 +7,18 @@ player
     }
 }
 
+texture
+{
+    name {Bricks}
+    path {maps/textures/brick.png}
+}
+
+texture
+{
+    name {Tp2}
+    path {maps/textures/tp2_2.png}
+}
+
 sector
 {
     outline
@@ -20,6 +32,10 @@ sector
         ceiling {100}
         floor {15}
     }
+    
+    defaultWallTexture {Bricks}
+    ceilingTexture {Bricks}
+    floorTexture {Bricks}
 }
 
 sector
@@ -34,6 +50,10 @@ sector
         ceiling {70}
         floor {30}
     }
+    
+    defaultWallTexture {Tp2}
+    ceilingTexture {Tp2}
+    floorTexture {Tp2}
 }
 
 sector
@@ -48,4 +68,8 @@ sector
         ceiling {100}
         floor {80}
     }
+    
+    defaultWallTexture {Tp2}
+    ceilingTexture {Tp2}
+    floorTexture {Tp2}
 }

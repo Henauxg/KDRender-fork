@@ -147,7 +147,7 @@ KDBData::Error KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Polygon &iPo
     vit = std::next(vitPrev);
     vitNext = std::next(vit);
 
-    bool reverseIter = iDesiredOrientation * WhichSide(*vitPrev, *vit, *vitNext) < 0;
+    bool reverseIter = iDesiredOrientation * WhichSide<KDBData::Vertex, double>(*vitPrev, *vit, *vitNext) < 0;
     if(reverseIter)
         FillWalls<std::reverse_iterator<std::list<KDBData::Vertex>::iterator>>(decimatedVertices.rbegin(), decimatedVertices.rend(), oWalls);
     else

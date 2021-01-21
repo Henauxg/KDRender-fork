@@ -196,7 +196,8 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
     m_MinVertexColor = Clamp(m_MinVertexColor, m_MinColorClamp, m_MaxColorRange);
     m_MaxVertexColor = Clamp(m_MaxVertexColor, m_MinColorClamp, m_MaxColorRange);
 
-    m_YModShift = m_pTexture->m_Height + FP_SHIFT;
+    if(m_pTexture)
+        m_YModShift = m_pTexture->m_Height + FP_SHIFT;
 
     if (m_OutSectorIdx == -1 && m_WhichSide > 0)
     {

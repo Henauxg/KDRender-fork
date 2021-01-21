@@ -1,0 +1,96 @@
+player
+{
+    start
+    {
+        position {10, 5}
+        direction {180}
+    }
+}
+
+texture
+{
+    name {Wall63}
+    path {maps/textures/wall63_2.png}
+}
+
+texture
+{
+    name {Flat5}
+    path {maps/textures/flat5_4.png}
+}
+
+texture
+{
+    name {W64b2}
+    path {maps/textures/w64b_2.png}
+}
+
+texture
+{
+    name {W65b1}
+    path {maps/textures/w65b_1.png}
+}
+
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {0, 0} {350, 0} {350, 350} {500, 350} {500, 450} {350, 450} {350, 600} {0, 600} {0, 450} {-150, 450} {-150, 350} {0, 350}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {0}
+    }
+
+    defaultWallTexture{Wall63}
+    floorTexture{Flat5}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {135, 0} {215, 0} {215, 450} {135, 450}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {250}
+        floor {0}
+    }
+
+    defaultWallTexture{Wall63}
+    floorTexture{Flat5}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {50, 600 {noTexture}} {300, 600} {300, 500} {50, 500}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {15}
+    }
+
+    defaultWallTexture{W65b1}
+    floorTexture{W65b1}
+    ceilingTexture{Flat5}
+}

@@ -8,13 +8,13 @@
 #include "Consts.h"
 #include "FP32.h"
 
-template<typename Vertex>
+template<typename Vertex, typename Intermediate = CType>
 inline int WhichSide(const Vertex &iV1, const Vertex &iV2, const Vertex &iP)
 {
-    CType normalX = iV2.m_Y - iV1.m_Y;
-    CType normalY = iV1.m_X - iV2.m_X;
+    Intermediate normalX = iV2.m_Y - iV1.m_Y;
+    Intermediate normalY = iV1.m_X - iV2.m_X;
 
-    CType prod = (iP.m_X - iV1.m_X) * normalX + (iP.m_Y - iV1.m_Y) * normalY;
+    Intermediate prod = (iP.m_X - iV1.m_X) * normalX + (iP.m_Y - iV1.m_Y) * normalY;
     if(prod == 0)
         return 0;
     else if(prod < 0)
@@ -69,8 +69,8 @@ inline void GetVector(const Vertex &iOrigin, int iDirection, Vertex &oTo)
     oTo.m_Y = iOrigin.m_Y + cosDirMult;
 }
 
-template <typename Vertex>
-inline CType DotProduct(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3)
+template <typename Vertex, typename RetType = CType>
+inline RetType DotProduct(const Vertex &v0, const Vertex &v1, const Vertex &v2, const Vertex &v3)
 {
     return (v1.m_X - v0.m_X) * (v3.m_X - v2.m_X) + (v1.m_Y - v0.m_Y) * (v3.m_Y - v2.m_Y);
 }
@@ -165,13 +165,13 @@ inline bool HalfLineSegmentIntersection(const Vertex &iHalfLineFrom, const Verte
         return false;
     else
     {
-        if (DotProduct(iHalfLineFrom, oIntersection, iHalfLineFrom, iHalfLineTo) < 0)
+        if (DotProduct<Vertex, Intermediate>(iHalfLineFrom, oIntersection, iHalfLineFrom, iHalfLineTo) < 0)
             return false;
 
-        if (DotProduct(iV1, oIntersection, iV1, iV2) < 0)
+        if (DotProduct<Vertex, Intermediate>(iV1, oIntersection, iV1, iV2) < 0)
             return false;
 
-        if (DotProduct(iV2, oIntersection, iV2, iV1) < 0)
+        if (DotProduct<Vertex, Intermediate>(iV2, oIntersection, iV2, iV1) < 0)
             return false;
 
         return true;
@@ -187,10 +187,10 @@ inline bool LineSegmentIntersection(const Vertex &iLineV1, const Vertex &iLineV2
         return false;
     else
     {
-        if (DotProduct(iSegV1, oIntersection, iSegV1, iSegV2) < 0)
+        if (DotProduct<Vertex, Intermediate>(iSegV1, oIntersection, iSegV1, iSegV2) < 0)
             return false;
 
-        if (DotProduct(iLineV2, oIntersection, iSegV1, iSegV2) < 0)
+        if (DotProduct<Vertex, Intermediate>(iLineV2, oIntersection, iSegV1, iSegV2) < 0)
             return false;
 
         return true;
@@ -206,16 +206,16 @@ inline bool SegmentSegmentIntersection(const Vertex &iV1, const Vertex &iV2, con
         return false;
     else
     {
-        if (DotProduct(iV1, oIntersection, iV1, iV2) < 0)
+        if (DotProduct<Vertex, Intermediate>(iV1, oIntersection, iV1, iV2) < 0)
             return false;
 
-        if (DotProduct(iV2, oIntersection, iV2, iV1) < 0)
+        if (DotProduct<Vertex, Intermediate>(iV2, oIntersection, iV2, iV1) < 0)
             return false;
 
-        if (DotProduct(iV3, oIntersection, iV3, iV4) < 0)
+        if (DotProduct<Vertex, Intermediate>(iV3, oIntersection, iV3, iV4) < 0)
             return false;
 
-        if (DotProduct(iV4, oIntersection, iV4, iV3) < 0)
+        if (DotProduct<Vertex, Intermediate>(iV4, oIntersection, iV4, iV3) < 0)
             return false;
 
         return true;

@@ -119,7 +119,9 @@ void WallRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX, CType i
     oMinY = std::max<int>(oMinYUnclamped, m_pBottomOcclusionBuffer[iX]);
     oMaxY = std::min<int>(oMaxYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[iX]);
 
-    
+    if(!m_pTexture)
+        return;
+
     // Affine mapping (nausea-inducing)
     // CType texelX = (1 - oT) * m_MinTexelX + oT * m_MaxTexelX;
     // Perspective correct
