@@ -34,9 +34,13 @@ KDBData::Error WallBreakerOperator::Run(const std::vector<KDBData::Wall> &iWalls
     if (ret != KDBData::Error::OK)
         return ret;
 
+    auto yConstCmp = [](const KDBData::Wall &iWall1, const KDBData::Wall &iWall2) {
+        return iWall1.m_VertexFrom.m_Y < iWall2.m_VertexFrom.m_Y;
+    };
+
     // Build cluster of walls that have the same const coordinate
     std::sort(xConstWalls.begin(), xConstWalls.end());
-    std::sort(yConstWalls.begin(), yConstWalls.end());
+    std::sort(yConstWalls.begin(), yConstWalls.end(), yConstCmp);
 
     std::vector<std::vector<KDBData::Wall> *> pCurrentWalls;
     pCurrentWalls.push_back(&xConstWalls);

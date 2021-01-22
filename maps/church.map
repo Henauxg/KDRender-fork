@@ -31,6 +31,29 @@ texture
     path {maps/textures/w65b_1.png}
 }
 
+texture
+{
+    name {W64b2}
+    path {maps/textures/w64b_2.png}
+}
+
+texture
+{
+    name {RRock09}
+    path {maps/textures/rrock09.png}
+}
+
+texture
+{
+    name {RRock01}
+    path {maps/textures/rrock01.png}
+}
+
+texture
+{
+    name {Dored}
+    path {maps/textures/dored.png}
+}
 
 sector
 {
@@ -80,6 +103,48 @@ sector
     {
         vertices
         {
+            {350, 100} {350, 200} {355, 200 {{Dored} {0, 0}}} {355, 100}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {180}
+        floor {50}
+    }
+
+    defaultWallTexture{Wall63}
+    floorTexture{Flat5}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {0, 100} {0, 200} {-5, 200 {{Dored} {0, 0}}} {-5, 100}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {180}
+        floor {50}
+    }
+
+    defaultWallTexture{Wall63}
+    floorTexture{Flat5}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
             {50, 600 {noTexture}} {300, 600} {300, 500} {50, 500}
         }
     }
@@ -92,5 +157,488 @@ sector
 
     defaultWallTexture{W65b1}
     floorTexture{W65b1}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {150, 520} {200, 520} {200, 540} {150, 540}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {35}
+    }
+
+    defaultWallTexture{RRock01}
+    floorTexture{RRock01}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {115, 600 {noTexture}} {235, 600} {235, 615} {115, 615}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {110}
+        floor {90}
+    }
+
+    defaultWallTexture{W64b2}
+    floorTexture{W64b2}
+    ceilingTexture{W64b2}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {165, 600 {noTexture}} {185, 600} {185, 615} {165, 615}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {185}
+        floor {50}
+    }
+
+    defaultWallTexture{W64b2}
+    floorTexture{W64b2}
+    ceilingTexture{W64b2}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {70, 395} {130, 395} {130, 415} {70, 415}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {10}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {70, 400} {130, 400} {130, 395} {70, 395}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {17}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {220, 395} {280, 395} {280, 415} {220, 415}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {10}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {220, 400} {280, 400} {280, 395} {220, 395}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {17}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {70, 335} {130, 335} {130, 355} {70, 355}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {10}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {70, 340} {130, 340} {130, 335} {70, 335}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {17}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {220, 335} {280, 335} {280, 355} {220, 355}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {10}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {220, 340} {280, 340} {280, 335} {220, 335}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {17}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {70, 275} {130, 275} {130, 295} {70, 295}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {10}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {70, 280} {130, 280} {130, 275} {70, 275}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {17}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {220, 275} {280, 275} {280, 295} {220, 295}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {10}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {220, 280} {280, 280} {280, 275} {220, 275}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {17}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {70, 215} {130, 215} {130, 235} {70, 235}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {10}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {70, 220} {130, 220} {130, 215} {70, 215}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {17}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {220, 215} {280, 215} {280, 235} {220, 235}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {10}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {220, 220} {280, 220} {280, 215} {220, 215}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {17}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {70, 155} {130, 155} {130, 175} {70, 175}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {10}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {70, 160} {130, 160} {130, 155} {70, 155}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {17}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {220, 155} {280, 155} {280, 175} {220, 175}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {10}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
+    ceilingTexture{Flat5}
+}
+
+sector
+{
+    outline
+    {
+        vertices
+        {
+            {220, 160} {280, 160} {280, 155} {220, 155}
+        }
+    }
+    
+    elevation
+    {
+        ceiling {200}
+        floor {17}
+    }
+    
+    defaultWallTexture{RRock09}
+    floorTexture{RRock09}
     ceilingTexture{Flat5}
 }
