@@ -5,6 +5,8 @@
 #include "FP32.h"
 #include "KDTreeMap.h"
 
+#include <list>
+
 namespace KDRData
 {
     struct Vertex
@@ -51,6 +53,39 @@ namespace KDRData
         CType m_Height;
         int m_SectorIdx;
         int m_TexId;
+    };
+
+    // For horizontal occlusion
+    class HorizontalScreenSegments
+    {
+    public:
+        HorizontalScreenSegments();
+        virtual ~HorizontalScreenSegments();
+
+    public:
+        void AddScreenSegment(unsigned int iMinX, unsigned int iMaxX);
+        bool IsScreenEntirelyDrawn() const;
+
+    protected:
+        struct IntervalEnd
+        {
+            unsigned int m_X;
+            int m_Direction; // +1 or -1
+
+            friend bool operator < (const IntervalEnd &iEnd1, const IntervalEnd &iEnd2)
+            {
+                if(iEnd1.m_X != iEnd2.m_X)
+                    return iEnd1.m_X < iEnd2.m_X;
+                else
+                    return iEnd1.m_Direction > iEnd2.m_Direction; // Yup, this way
+            }
+        };
+
+    protected:
+        void InsertIntervalEnd(const IntervalEnd &iEnd);
+
+    protected:
+        std::list<IntervalEnd> m_Segments;
     };
 
     struct Settings

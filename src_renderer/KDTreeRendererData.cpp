@@ -96,3 +96,68 @@ KDRData::Sector KDRData::GetSectorFromKDSector(const KDMapData::Sector &iSector)
 
     return sector;
 }
+
+KDRData::HorizontalScreenSegments::HorizontalScreenSegments()
+{
+}
+
+KDRData::HorizontalScreenSegments::~HorizontalScreenSegments()
+{
+}
+
+void KDRData::HorizontalScreenSegments::AddScreenSegment(unsigned int iMinX, unsigned int iMaxX)
+{
+    InsertIntervalEnd({iMinX, 1});
+    InsertIntervalEnd({iMaxX, -1});
+
+    // Merge overlapping intervals
+    int stack = 0;
+    int previousDirection = 1;
+    auto it = m_Segments.begin();
+    while(it != m_Segments.end() && stack >= 0) // stack >= should always be true
+    {
+        if (it->m_Direction == 1 && previousDirection == 1)
+            stack++;
+        else if(it->m_Direction == -1 && previousDirection == -1)
+            stack--;
+        previousDirection = it->m_Direction;
+
+        if (stack >= 2)
+            it = m_Segments.erase(it);
+        else
+            it++;
+    }
+
+    // Merge consecutive intervals
+    it = m_Segments.begin();
+    previousDirection = 1;
+    int previousValue = 0;
+    while (it != m_Segments.end())
+    {
+        bool doMerge = false;
+        if(previousDirection == -1 && previousValue == it->m_X - 1)
+            doMerge = true;
+
+        previousValue = it->m_X;
+        previousDirection = it->m_Direction;
+
+        if (doMerge)
+            it = m_Segments.erase(it);
+        else
+            it++;
+    }
+}
+
+void KDRData::HorizontalScreenSegments::InsertIntervalEnd(const IntervalEnd &iEnd)
+{
+    // Insert in sorted list
+    auto it = m_Segments.begin();
+    while (it != m_Segments.end() && *it < iEnd)
+        it++;
+    m_Segments.insert(it, iEnd);
+}
+
+bool KDRData::HorizontalScreenSegments::IsScreenEntirelyDrawn() const
+{
+    return m_Segments.size() == 2 && m_Segments.back().m_X == 0 && m_Segments.front().m_X == WINDOW_WIDTH - 1;
+}

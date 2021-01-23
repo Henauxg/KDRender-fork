@@ -79,6 +79,7 @@ int main(int argc, char **argv)
     int slowDown = 0;
 
     unsigned int poolEvent = 0;
+    unsigned int showFPS = 0;
 
     double totalTime = 0.0;
     int64_t frameCount = 0;
@@ -148,9 +149,8 @@ int main(int argc, char **argv)
             slowDown = 0;
         }
 
-        if(poolEvent++ % 20 == 0)
+        // if(poolEvent++ % 20 == 0)
         {
-            poolEvent = 0;
             while (app.pollEvent(event))
             {
                 switch (event.type)
@@ -185,7 +185,10 @@ int main(int argc, char **argv)
         // }
 
         // if (1000.f / deltaT < 60.f)
-            // std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+        if (showFPS++ % 100 == 0)
+        {
+            std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+        }
 
         frameCount++;
 

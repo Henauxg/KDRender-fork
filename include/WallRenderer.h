@@ -30,13 +30,15 @@ protected:
     inline void ComputeRenderParameters(int iX, int iMinX, int iMaxX, CType iInvMinMaxXRange,
                                         int iMinVertexBottomPixel, int iMaxVertexBottomPixel,
                                         int iMinVertexTopPixel, int iMaxVertexTopPixel,
-                                        CType iBottomZ, CType iTopZ,
                                         CType &oT, int &oMinY, int &oMaxY,
-                                        int &oMinYUnclamped, int &oMaxYUnclamped,
-                                        int &oTexelXClamped, CType &oMinTexelY, CType &oMaxTexelY) const;
+                                        int &oMinYUnclamped, int &oMaxYUnclamped) const;
+    inline void ComputeTextureParameters(CType iT, int iMinY, int iMaxY,
+                                         CType iBottomZ, CType iTopZ,
+                                         int iMinYUnclamped, int iMaxYUnclamped,
+                                         int &oTexelXClamped, CType &oMinTexelY, CType &oMaxTexelY) const;
     inline void RenderColumn(CType iT, int iMinVertexColor, int iMaxVertexColor,
-                             int iMinY, int iMaxY, int iX,
-                             int iR, int iG, int iB);
+                                   int iMinY, int iMaxY, int iX,
+                                   int iR, int iG, int iB);
     inline void RenderColumnWithTexture(CType iT, int iMinVertexLight, int iMaxVertexLight,
                                         int iMinY, int iMaxY, int iX,
                                         int iTexelXClamped, CType iMinTexelY, CType iMaxTexelY);
@@ -105,10 +107,8 @@ void WallRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigned 
 void WallRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX, CType iInvMinMaxXRange,
                                            int iMinVertexBottomPixel, int iMaxVertexBottomPixel,
                                            int iMinVertexTopPixel, int iMaxVertexTopPixel,
-                                           CType iBottomZ, CType iTopZ,
                                            CType &oT, int &oMinY, int &oMaxY,
-                                           int &oMinYUnclamped, int &oMaxYUnclamped,
-                                           int &oTexelXClamped, CType &oMinTexelY, CType &oMaxTexelY) const
+                                           int &oMinYUnclamped, int &oMaxYUnclamped) const
 {
     // For extra precision, the inverse range has been shifted. Need to shift it back
     oT = iMaxX == iMinX ? CType(0) : (static_cast<CType>(iX - iMinX) * iInvMinMaxXRange) >> 7u;
@@ -118,25 +118,31 @@ void WallRenderer::ComputeRenderParameters(int iX, int iMinX, int iMaxX, CType i
     oMaxYUnclamped = MultiplyIntFpToInt(iMinVertexTopPixel, 1 - oT) + MultiplyIntFpToInt(iMaxVertexTopPixel, oT);
     oMinY = std::max<int>(oMinYUnclamped, m_pBottomOcclusionBuffer[iX]);
     oMaxY = std::min<int>(oMaxYUnclamped, WINDOW_HEIGHT - 1 - m_pTopOcclusionBuffer[iX]);
+}
 
-    if(!m_pTexture)
+void WallRenderer::ComputeTextureParameters(CType iT, int iMinY, int iMaxY,
+                                            CType iBottomZ, CType iTopZ,
+                                            int iMinYUnclamped, int iMaxYUnclamped,
+                                            int &oTexelXClamped, CType &oMinTexelY, CType &oMaxTexelY) const
+{
+    if (!m_pTexture)
         return;
 
     // Affine mapping (nausea-inducing)
     // CType texelX = (1 - oT) * m_MinTexelX + oT * m_MaxTexelX;
     // Perspective correct
-    CType texelX = ((1 - oT) * (m_MinTexelX / m_MinDist) + oT * (m_MaxTexelX / m_MaxDist)) / ((1 - oT) / m_MinDist + oT / m_MaxDist);
+    CType texelX = ((1 - iT) * (m_MinTexelX / m_MinDist) + iT * (m_MaxTexelX / m_MaxDist)) / ((1 - iT) / m_MinDist + iT / m_MaxDist);
     unsigned int xModShift = m_pTexture->m_Width + FP_SHIFT;
     oTexelXClamped = texelX - ((texelX >> xModShift) << xModShift);
     oMinTexelY = ((iBottomZ + m_TexVOffset) * CType(int(1u << m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
     oMaxTexelY = ((iTopZ + m_TexVOffset) * CType(int(1u << m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
-    if (m_pTexture && oMaxYUnclamped != oMinYUnclamped)
+    if (m_pTexture && iMaxYUnclamped != iMinYUnclamped)
     {
         // Clamp
-        CType tMin = (CType(oMinY) - CType(oMinYUnclamped)) / (CType(oMaxYUnclamped - oMinYUnclamped));
+        CType tMin = (CType(iMinY) - CType(iMinYUnclamped)) / (CType(iMaxYUnclamped - iMinYUnclamped));
         CType minTexelYBackup = oMinTexelY;
         oMinTexelY = (1 - tMin) * oMinTexelY + tMin * oMaxTexelY;
-        CType tMax = (CType(oMaxYUnclamped) - CType(oMaxY)) / (CType(oMaxYUnclamped - oMinYUnclamped));
+        CType tMax = (CType(iMaxYUnclamped) - CType(iMaxY)) / (CType(iMaxYUnclamped - iMinYUnclamped));
         oMaxTexelY = (1 - tMax) * oMaxTexelY + tMax * minTexelYBackup;
     }
 }
@@ -160,24 +166,23 @@ void WallRenderer::RenderColumnWithTexture(CType iT, int iMinVertexLight, int iM
     int light = (iMinVertexLight * (1 - iT)) + iT * iMaxVertexLight;
     CType tY, texelY = iMinTexelY;
     int texelYClamped;
-
-    // Need a little more precision to compute deltaTexelY
-    CType invMinMaxYRange = iMaxY == iMinY ? CType(1 << 7u) : (1 << 7u) / CType(iMaxY - iMinY);
-    CType deltaTexelY = ((iMaxTexelY - iMinTexelY) * invMinMaxYRange) >> 7u;
+    CType deltaTexelY = iMaxY == iMinY ? CType(1) : (iMaxTexelY - iMinTexelY) / CType(iMaxY - iMinY);
 
     unsigned int textureIdxX = (iTexelXClamped * (1u << m_pTexture->m_Height)) << 2u;
     unsigned int textureIdxY;
+    unsigned char r, g, b;
     for (unsigned int y = iMinY; y <= iMaxY; y++)
     {
         texelY = texelY + deltaTexelY;
         texelYClamped = texelY - ((texelY >> (m_YModShift)) << (m_YModShift));
         textureIdxY = textureIdxX + (texelYClamped << 2u);
 
-        unsigned char r = m_pTexture->m_pData[textureIdxY];
-        unsigned char g = m_pTexture->m_pData[textureIdxY + 1];
-        unsigned char b = m_pTexture->m_pData[textureIdxY + 2];
+        r = m_pTexture->m_pData[textureIdxY];
+        g = m_pTexture->m_pData[textureIdxY + 1];
+        b = m_pTexture->m_pData[textureIdxY + 2];
 
-        // TODO: get rid of integer multiplications (way too expensive), use offsets instead
+        // TODO: get rid of integer multiplications (way too expensive), use CLUT instead
+        // Well, current hardware doesn't support palette as far as I know, so a CLUT might slow things down actually
         WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + iX, (light * r) >> 8u, (light * g) >> 8u, (light * b) >> 8u);
     }
 }
