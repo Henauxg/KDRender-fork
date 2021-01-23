@@ -163,6 +163,12 @@ int KDTreeNode::RecursiveComputeDepth(const KDTreeNode *ipNode) const
         return 1 + std::max(RecursiveComputeDepth(ipNode->m_NegativeSide), RecursiveComputeDepth(ipNode->m_PositiveSide));
 }
 
+void KDTreeNode::GetAABB(KDMapData::Vertex &oAABBMin, KDMapData::Vertex &oAABBMax) const
+{
+    oAABBMin = m_AABBMin;
+    oAABBMax = m_AABBMax;
+}
+
 KDTreeMap::KDTreeMap() : m_RootNode(nullptr)
 {
     

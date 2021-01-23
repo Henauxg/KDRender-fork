@@ -110,6 +110,7 @@ namespace KDRData
     };
 
     Wall GetWallFromNode(KDTreeNode *ipNode, unsigned int iWallIdx);
+    void GetAABBFromNode(KDTreeNode *ipNode, KDRData::Vertex &oAABBMin,  KDRData::Vertex &oAABBMax);
     Sector GetSectorFromKDSector(const KDMapData::Sector &iSector);
 } // namespace KDRData
 

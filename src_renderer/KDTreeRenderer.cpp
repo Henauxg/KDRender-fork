@@ -83,7 +83,9 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
     if(m_HorizDrawnSegs.IsScreenEntirelyDrawn())
         return;
 
-    // TODO: frustum culling (use pre-computed AABB to make moving towards a generic BSP easier)
+    // Frustum culling
+    if(DoFrustumCulling(pNode))
+        return;
 
     bool positiveSide;
     if (pNode->m_SplitPlane == KDTreeNode::SplitPlane::XConst)
@@ -167,6 +169,49 @@ void KDTreeRenderer::RenderFlatSurfaces()
     FlatSurfacesRenderer flatRenderer(m_FlatSurfaces, m_State, m_Settings, m_Map);
     flatRenderer.SetBuffers(m_pFrameBuffer, m_pHorizOcclusionBuffer, m_pTopOcclusionBuffer, m_pBottomOcclusionBuffer);
     flatRenderer.Render();
+}
+
+bool KDTreeRenderer::DoFrustumCulling(KDTreeNode *ipNode) const
+{
+    // Should never happen
+    if(!ipNode)
+        return true;
+
+    KDRData::Vertex aabbMin, aabbMax;
+    GetAABBFromNode(ipNode, aabbMin, aabbMax);
+
+    // Build vertices
+    KDRData::Vertex nodeGeom[4];
+
+    nodeGeom[0].m_X = aabbMin.m_X;
+    nodeGeom[0].m_Y = aabbMin.m_Y;
+
+    nodeGeom[1].m_X = aabbMin.m_X;
+    nodeGeom[1].m_Y = aabbMax.m_Y;
+
+    nodeGeom[2].m_X = aabbMax.m_X;
+    nodeGeom[2].m_Y = aabbMax.m_Y;
+
+    nodeGeom[3].m_X = aabbMax.m_X;
+    nodeGeom[3].m_Y = aabbMin.m_Y;
+
+    // Test vertices against frustum: if at least one is inside, return false
+    for (unsigned int i = 0; i < 4; i++)
+    {
+        if ((WhichSide(m_State.m_PlayerPosition, m_State.m_FrustumToLeft, nodeGeom[i]) >= 0) &&
+            (WhichSide(m_State.m_PlayerPosition, m_State.m_FrustumToRight, nodeGeom[i]) <= 0))
+            return false;
+    }
+
+    // Test segments againt frustum: if at least one segment intersects the frustum, return false
+    KDRData::Vertex unused;
+    for (unsigned int i = 0; i < 4; i++)
+    {
+        if (LineSegmentIntersection(m_State.m_PlayerPosition, m_State.m_FrustumToLeft, nodeGeom[i], nodeGeom[(i + 1) % 4], unused))
+            return false;
+    }
+
+    return true;
 }
 
 CType KDTreeRenderer::ComputeZ()

@@ -36,12 +36,14 @@ protected:
 
 protected:
     CType ComputeZ();
-    CType RecursiveComputeZ(KDTreeNode *pNode);
+    CType RecursiveComputeZ(KDTreeNode *ipNode);
 
     void Render();
-    void RenderNode(KDTreeNode *pNode);
+    void RenderNode(KDTreeNode *ipNode);
     bool AddFlatSurface(KDRData::FlatSurface &iFlatSurface);
     void RenderFlatSurfaces();
+
+    bool DoFrustumCulling(KDTreeNode *pNode) const;
 
 protected:
     const KDTreeMap &m_Map;

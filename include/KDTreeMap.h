@@ -74,6 +74,7 @@ public:
     int GetSplitOffset() const { return m_SplitOffset; }
     unsigned int GetNbOfWalls() const { return m_Walls.size(); }
     const KDMapData::Wall *GetWall(unsigned int iWallIdx) const { return &m_Walls[iWallIdx]; }
+    void GetAABB(KDMapData::Vertex &oAABBMin, KDMapData::Vertex &oAABBMax) const;
 
     template <typename WallType>
     WallType BuildXYScaledWall(unsigned iWallIdx) const

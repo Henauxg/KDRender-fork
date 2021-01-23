@@ -86,6 +86,21 @@ KDRData::Wall KDRData::GetWallFromNode(KDTreeNode *ipNode, unsigned int iWallIdx
     return wall;
 }
 
+void KDRData::GetAABBFromNode(KDTreeNode *ipNode, KDRData::Vertex &oAABBMin,  KDRData::Vertex &oAABBMax)
+{
+    if(!ipNode)
+        return;
+
+    KDMapData::Vertex kdAABBMin, kdAABBMax;
+    ipNode->GetAABB(kdAABBMin, kdAABBMax);
+
+    oAABBMin.m_X = CType(kdAABBMin.m_X) / POSITION_SCALE;
+    oAABBMin.m_Y = CType(kdAABBMin.m_Y) / POSITION_SCALE;
+
+    oAABBMax.m_X = CType(kdAABBMax.m_X) / POSITION_SCALE;
+    oAABBMax.m_Y = CType(kdAABBMax.m_Y) / POSITION_SCALE;
+}
+
 KDRData::Sector KDRData::GetSectorFromKDSector(const KDMapData::Sector &iSector)
 {
     KDRData::Sector sector;
