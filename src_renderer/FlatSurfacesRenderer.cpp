@@ -90,6 +90,7 @@ void FlatSurfacesRenderer::Render()
     for (unsigned int i = 0; i < WINDOW_HEIGHT; i++)
         m_LinesXStart[i] = -1;
 
+    unsigned count = 0;
     for (const auto &keyVal : m_FlatSurfaces)
     {
         const CType currentHeight = keyVal.first;
@@ -100,10 +101,16 @@ void FlatSurfacesRenderer::Render()
 
         for (unsigned int i = 0; i < currentSurfaces.size(); i++)
         {
+            m_RDbg = count % 3 == 0 ? 160 : 0;
+            m_GDbg = count % 3 == 1 ? 160 : 0;
+            m_BDbg = count % 3 == 2 ? 160 : 0;
+            count++;
+
             // TODO textures
             m_CurrSectorR = 255;
             m_CurrSectorG = 255;
             m_CurrSectorB = 255;
+            
             if(currentSurfaces[i].m_TexId != -1)
             {
                 unsigned int hIdx = m_Map.m_Textures[currentSurfaces[i].m_TexId].m_Height;
@@ -191,36 +198,52 @@ void FlatSurfacesRenderer::Render()
 
 void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData::FlatSurface &iSurface)
 {
+    if(iY == WINDOW_HEIGHT / 2)
+        return;
+
     int maxColorRange = 160;
 
-    char r = 1;  // iSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
-    char g = 1; // iSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
-    char b = 1; // iSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
-
     CType dist = -1;
+    CType deltaTexelX, deltaTexelY;
+    KDRData::Vertex leftmostTexel;
     int light;
 
     if (m_DistYCache[iY] >= 0)
+    {
         dist = m_DistYCache[iY];
+        leftmostTexel = m_LeftmostTexelCache[iY];
+        deltaTexelX = m_DeltaTexelXCache[iY];
+        deltaTexelY = m_DeltaTexelYCache[iY];
+    }
     else
     {
-        // CType foo = (CType(iY) / WINDOW_HEIGHT - CType(1)/CType(2)) / m_Settings.m_VerticalDistortionCst;
-        // int theta = (m_Settings.m_PlayerVerticalFOV * (2 * iY - WINDOW_HEIGHT)) / (2 * WINDOW_HEIGHT);
-        // CType sinTheta = sinInt(theta);
+        dist = m_Settings.m_VerticalDistortionCst * ((m_State.m_PlayerZ - iSurface.m_Height) / (CType(iY) / WINDOW_HEIGHT - CType(1) / CType(2)));
+        dist = dist < 0 ? -dist : dist;
+        m_DistYCache[iY] = dist;
 
-        // if (sinTheta != 0)
-        // {
-        //     dist = (m_State.m_PlayerZ - iSurface.m_Height) / sinTheta;
-        //     dist = dist < 0 ? -dist : dist;
-        //     dist = std::min(dist, m_Settings.m_MaxColorInterpolationDist);
-        //     m_DistYCache[iY] = dist;
-        // }
+        const KDMapData::Texture &texture = m_Map.m_Textures[iSurface.m_TexId];
+        CType length = dist / cosInt(m_Settings.m_PlayerHorizontalFOV / 2);
 
-        if(iY != WINDOW_HEIGHT / 2)
-        {
-            dist = m_Settings.m_VerticalDistortionCst * ((m_State.m_PlayerZ - iSurface.m_Height) / (CType(iY) / WINDOW_HEIGHT - CType(1) / CType(2)));
-            dist = dist < 0 ? -dist : dist;
-        }
+        leftmostTexel.m_X = (m_State.m_FrustumToLeft.m_X - m_State.m_PlayerPosition.m_X) * length + m_State.m_PlayerPosition.m_X;
+        leftmostTexel.m_Y = (m_State.m_FrustumToLeft.m_Y - m_State.m_PlayerPosition.m_Y) * length + m_State.m_PlayerPosition.m_Y;
+
+        leftmostTexel.m_X = leftmostTexel.m_X * CType(int(1u << texture.m_Width)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
+        leftmostTexel.m_Y = leftmostTexel.m_Y * CType(int(1u << texture.m_Height)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
+
+        m_LeftmostTexelCache[iY] = leftmostTexel;
+
+        KDRData::Vertex rightmostTexel;
+        rightmostTexel.m_X = (m_State.m_FrustumToRight.m_X - m_State.m_PlayerPosition.m_X) * length + m_State.m_PlayerPosition.m_X;
+        rightmostTexel.m_Y = (m_State.m_FrustumToRight.m_Y - m_State.m_PlayerPosition.m_Y) * length + m_State.m_PlayerPosition.m_Y;
+
+        rightmostTexel.m_X = rightmostTexel.m_X * CType(int(1u << texture.m_Width)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
+        rightmostTexel.m_Y = rightmostTexel.m_Y * CType(int(1u << texture.m_Width)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
+
+        deltaTexelX = (rightmostTexel.m_X - leftmostTexel.m_X) / CType(WINDOW_WIDTH);
+        deltaTexelY = (rightmostTexel.m_Y - leftmostTexel.m_Y) / CType(WINDOW_WIDTH);
+
+        m_DeltaTexelXCache[iY] = deltaTexelX;
+        m_DeltaTexelYCache[iY] = deltaTexelY;
     }
 
     if (dist >= 0)
@@ -231,27 +254,10 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
         if (iSurface.m_TexId >= 0)
         {
             const KDMapData::Texture &texture = m_Map.m_Textures[iSurface.m_TexId];
-            CType length = dist / cosInt(m_Settings.m_PlayerHorizontalFOV / 2);
 
-            KDRData::Vertex leftmostTexel;
-            leftmostTexel.m_X = (m_State.m_FrustumToLeft.m_X - m_State.m_PlayerPosition.m_X) * length + m_State.m_PlayerPosition.m_X;
-            leftmostTexel.m_Y = (m_State.m_FrustumToLeft.m_Y - m_State.m_PlayerPosition.m_Y) * length + m_State.m_PlayerPosition.m_Y;
+            CType currTexelX = leftmostTexel.m_X + CType(iMinX) * deltaTexelX;
+            CType currTexelY = leftmostTexel.m_Y + CType(iMinX) * deltaTexelY;
 
-            KDRData::Vertex rightmostTexel;
-            rightmostTexel.m_X = (m_State.m_FrustumToRight.m_X - m_State.m_PlayerPosition.m_X) * length + m_State.m_PlayerPosition.m_X;
-            rightmostTexel.m_Y = (m_State.m_FrustumToRight.m_Y - m_State.m_PlayerPosition.m_Y) * length + m_State.m_PlayerPosition.m_Y;
-
-            leftmostTexel.m_X = leftmostTexel.m_X * CType(int(1u << texture.m_Width)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
-            leftmostTexel.m_Y = leftmostTexel.m_Y * CType(int(1u << texture.m_Height)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
-
-            rightmostTexel.m_X = rightmostTexel.m_X * CType(int(1u << texture.m_Width)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
-            rightmostTexel.m_Y = rightmostTexel.m_Y * CType(int(1u << texture.m_Width)) * CType(POSITION_SCALE) / CType(TEXEL_SCALE);
-
-            CType t = CType(iMinX) / CType(WINDOW_WIDTH);
-            CType currTexelX = (1 - t) * leftmostTexel.m_X + t * rightmostTexel.m_X;
-            CType currTexelY = (1 - t) * leftmostTexel.m_Y + t * rightmostTexel.m_Y;
-            CType deltaTexelX = (rightmostTexel.m_X - leftmostTexel.m_X) / CType(WINDOW_WIDTH);
-            CType deltaTexelY = (rightmostTexel.m_Y - leftmostTexel.m_Y) / CType(WINDOW_WIDTH);
             unsigned int yModShift = texture.m_Height + FP_SHIFT;
             unsigned int xModShift = texture.m_Width + FP_SHIFT;
             int currTexelXClamped, currTexelYClamped;
@@ -265,6 +271,10 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
                 r = texture.m_pData[((currTexelXClamped * (1u << texture.m_Height)) << 2u) + (currTexelYClamped << 2u) + 0];
                 g = texture.m_pData[((currTexelXClamped * (1u << texture.m_Height)) << 2u) + (currTexelYClamped << 2u) + 1];
                 b = texture.m_pData[((currTexelXClamped * (1u << texture.m_Height)) << 2u) + (currTexelYClamped << 2u) + 2];
+
+                // r = m_RDbg == 0 ? r : m_RDbg;
+                // g = m_GDbg == 0 ? g : m_GDbg;
+                // b = m_BDbg == 0 ? b : m_BDbg;
 
                 WriteFrameBuffer((WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH + x, (light * r) >> 8u, (light * g) >> 8u, (light * b) >> 8u);
 

@@ -34,14 +34,19 @@ protected:
     int *m_pTopOcclusionBuffer;
     int *m_pBottomOcclusionBuffer;
 
-// Cache
+    // Caches
     int m_LinesXStart[WINDOW_HEIGHT];
     CType m_DistYCache[WINDOW_HEIGHT];
+    KDRData::Vertex m_LeftmostTexelCache[WINDOW_HEIGHT];
+    CType m_DeltaTexelYCache[WINDOW_HEIGHT];
+    CType m_DeltaTexelXCache[WINDOW_HEIGHT];
 
-// TODO textures
+    // TODO textures
     unsigned char m_CurrSectorR;
     unsigned char m_CurrSectorG;
     unsigned char m_CurrSectorB;
+
+    int m_RDbg, m_GDbg, m_BDbg;
 };
 
 void FlatSurfacesRenderer::WriteFrameBuffer(unsigned int idx, unsigned char r, unsigned char g, unsigned char b)

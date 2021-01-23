@@ -153,16 +153,28 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
 bool KDTreeRenderer::AddFlatSurface(const KDRData::FlatSurface &iFlatSurface)
 {
     bool hasBeenAbsorbed = false;
-    for(auto &k : m_FlatSurfaces)
+    // for(auto &k : m_FlatSurfaces)
+    // {
+    //     for (KDRData::FlatSurface &flatSurface : k.second)
+    //     {
+    //         if (flatSurface.Absorb(iFlatSurface))
+    //             hasBeenAbsorbed = true;
+    //     }
+    // }
+    auto found = m_FlatSurfaces.find(iFlatSurface.m_Height);
+    if(found != m_FlatSurfaces.end())
     {
-        for (KDRData::FlatSurface &flatSurface : k.second)
+        for (KDRData::FlatSurface &flatSurface : found->second)
         {
             if (flatSurface.Absorb(iFlatSurface))
+            {
                 hasBeenAbsorbed = true;
+                break;
+            }
         }
     }
 
-    if(!hasBeenAbsorbed)
+    if (!hasBeenAbsorbed)
         m_FlatSurfaces[iFlatSurface.m_Height].push_back(iFlatSurface);
 
     return true;

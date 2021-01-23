@@ -139,9 +139,9 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
     
     // Same as above but with little refacto
     m_MinX = WINDOW_WIDTH / 2 + MultiplyIntFpToInt(WINDOW_WIDTH, tanInt(m_MinAngle) * m_Settings.m_HorizontalDistortionCst);
-    m_maxX = WINDOW_WIDTH / 2 + MultiplyIntFpToInt(WINDOW_WIDTH, tanInt(m_MaxAngle) * m_Settings.m_HorizontalDistortionCst);
+    m_maxX = WINDOW_WIDTH / 2 + MultiplyIntFpToInt(WINDOW_WIDTH, tanInt(m_MaxAngle) * m_Settings.m_HorizontalDistortionCst) - 1;
 
-    if (m_MinX > m_maxX)
+    if (m_MinX >= m_maxX)
         return;
 
     m_MinX = Clamp(m_MinX, 0, WINDOW_WIDTH - 1);
