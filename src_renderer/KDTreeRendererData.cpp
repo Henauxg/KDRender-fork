@@ -32,7 +32,8 @@ bool KDRData::FlatSurface::Absorb(const FlatSurface &iOther)
     bool doAbsorb = true;
     for (unsigned int x = iOther.m_MinX; x <= iOther.m_MaxX; x++)
     {
-        if (m_MinY[x] != WINDOW_HEIGHT || m_MaxY[x] != 0)
+        // There is actual data here, cannot absorb
+        if (m_MinY[x] <= m_MaxY[x])
         {
             doAbsorb = false;
             break;
@@ -49,6 +50,27 @@ bool KDRData::FlatSurface::Absorb(const FlatSurface &iOther)
     }
 
     return doAbsorb;
+}
+
+void KDRData::FlatSurface::Tighten()
+{
+    for (unsigned int x = m_MinX; x <= m_MaxX; x++)
+    {
+        if (m_MinY[x] <= m_MaxY[x])
+        {
+            m_MinX = x;
+            break;
+        }
+    }
+
+    for (unsigned int x = m_MaxX; x >= m_MinX; x--)
+    {
+        if (m_MinY[x] <= m_MaxY[x])
+        {
+            m_MaxX = x;
+            break;
+        }
+    }
 }
 
 KDRData::Wall KDRData::GetWallFromNode(KDTreeNode *ipNode, unsigned int iWallIdx)

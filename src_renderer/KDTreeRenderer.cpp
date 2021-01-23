@@ -139,7 +139,7 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
             wallRenderer.SetBuffers(m_pFrameBuffer, m_pHorizOcclusionBuffer, m_pTopOcclusionBuffer, m_pBottomOcclusionBuffer);
             wallRenderer.Render(generatedFlats);
 
-            for(const KDRData::FlatSurface &flat : generatedFlats)
+            for(KDRData::FlatSurface &flat : generatedFlats)
                 AddFlatSurface(flat);
         }
     }
@@ -150,8 +150,10 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
         RenderNode(pNode->m_PositiveSide);
 }
 
-bool KDTreeRenderer::AddFlatSurface(const KDRData::FlatSurface &iFlatSurface)
+bool KDTreeRenderer::AddFlatSurface(KDRData::FlatSurface &iFlatSurface)
 {
+    iFlatSurface.Tighten();
+
     bool hasBeenAbsorbed = false;
     // for(auto &k : m_FlatSurfaces)
     // {

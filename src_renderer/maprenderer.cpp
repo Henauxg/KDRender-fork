@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 
     sf::RenderWindow app(sf::VideoMode(WINDOW_WIDTH, WINDOW_HEIGHT),
                          "KDTree Map Renderer",
-                         sf::Style::Fullscreen);
+                         sf::Style::Close);
 
     Screen screen(renderer);
     sf::Clock clock;

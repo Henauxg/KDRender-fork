@@ -78,6 +78,7 @@ void FlatSurfacesRenderer::RenderLegacy()
     }
 }
 
+// #include <iostream>
 void FlatSurfacesRenderer::Render()
 {
     // {

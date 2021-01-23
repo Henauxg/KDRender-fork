@@ -39,6 +39,7 @@ namespace KDRData
 
     public:
         bool Absorb(const FlatSurface &iOther);
+        void Tighten();
 
     public:
         int m_MinX;

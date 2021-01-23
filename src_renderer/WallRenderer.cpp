@@ -181,7 +181,7 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
     m_MinDist = m_MinDist <= CType(0) ? CType(1) : m_MinDist;
 
     m_MaxColorRange = m_Wall.m_VertexFrom.m_X == m_Wall.m_VertexTo.m_X ? 230 : 180;
-    m_MinColorClamp = m_Wall.m_VertexFrom.m_X == m_Wall.m_VertexTo.m_X ? 55 : 50;
+    m_MinColorRange = m_Wall.m_VertexFrom.m_X == m_Wall.m_VertexTo.m_X ? 55 : 50;
 
     m_WhichSide = WhichSide(m_Wall.m_VertexFrom, m_Wall.m_VertexTo, m_State.m_PlayerPosition);
 
@@ -193,8 +193,8 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
 
     m_MinVertexColor = ((m_Settings.m_MaxColorInterpolationDist - m_MinDist) * m_MaxColorRange) / m_Settings.m_MaxColorInterpolationDist;
     m_MaxVertexColor = ((m_Settings.m_MaxColorInterpolationDist - m_MaxDist) * m_MaxColorRange) / m_Settings.m_MaxColorInterpolationDist;
-    m_MinVertexColor = Clamp(m_MinVertexColor, m_MinColorClamp, m_MaxColorRange);
-    m_MaxVertexColor = Clamp(m_MaxVertexColor, m_MinColorClamp, m_MaxColorRange);
+    m_MinVertexColor = Clamp(m_MinVertexColor, m_MinColorRange, m_MaxColorRange);
+    m_MaxVertexColor = Clamp(m_MaxVertexColor, m_MinColorRange, m_MaxColorRange);
 
     if(m_pTexture)
         m_YModShift = m_pTexture->m_Height + FP_SHIFT;

@@ -40,7 +40,7 @@ protected:
 
     void Render();
     void RenderNode(KDTreeNode *pNode);
-    bool AddFlatSurface(const KDRData::FlatSurface &iFlatSurface);
+    bool AddFlatSurface(KDRData::FlatSurface &iFlatSurface);
     void RenderFlatSurfaces();
 
 protected:

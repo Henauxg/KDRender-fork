@@ -71,7 +71,7 @@ protected:
     CType m_MaxDist;
 
     int m_MaxColorRange;
-    int m_MinColorClamp;
+    int m_MinColorRange;
     int m_MinVertexColor;
     int m_MaxVertexColor;
 
