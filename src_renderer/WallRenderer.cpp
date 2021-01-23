@@ -262,7 +262,6 @@ void WallRenderer::RenderHardWall(std::vector<KDRData::FlatSurface> &oGeneratedF
     int texelXClamped;
     for (int x = m_MinX; x <= m_maxX; x++)
     {
-        // TODO: optimize divisions
         if (!m_pHorizOcclusionBuffer[x])
         {
             // ComputeRenderParameters(x, m_MinX, m_maxX, m_InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, m_InSector.m_Floor, m_InSector.m_Ceiling, t, minY, maxY, minYUnclamped, maxYUnclamped, texelXClamped, minTexelY, maxTexelY);
@@ -336,7 +335,6 @@ void WallRenderer::RenderSoftWallTop(std::vector<KDRData::FlatSurface> &oGenerat
     int texelXClamped;
     for (unsigned int x = m_MinX; x <= m_maxX; x++)
     {
-        // TODO: optimize divisions
         if (!m_pHorizOcclusionBuffer[x])
         {
             // ComputeRenderParameters(x, m_MinX, m_maxX, m_InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, bottomCeiling, topCeiling, t, minY, maxY, minYUnclamped, maxYUnclamped, texelXClamped, minTexelY, maxTexelY);
@@ -408,7 +406,6 @@ void WallRenderer::RenderSoftWallBottom(std::vector<KDRData::FlatSurface> &oGene
     int texelXClamped;
     for (unsigned int x = m_MinX; x <= m_maxX; x++)
     {
-        // TODO: optimize divisions
         if (!m_pHorizOcclusionBuffer[x])
         {
             // ComputeRenderParameters(x, m_MinX, m_maxX, m_InvMinMaxXRange, minVertexBottomPixel, maxVertexBottomPixel, minVertexTopPixel, maxVertexTopPixel, bottomFloor, topFloor, t, minY, maxY, minYUnclamped, maxYUnclamped, texelXClamped, minTexelY, maxTexelY);

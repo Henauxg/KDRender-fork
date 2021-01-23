@@ -1,7 +1,7 @@
 #ifndef Consts_h
 #define Consts_h
 
-#define WINDOW_WIDTH 1024
+#define WINDOW_WIDTH 1056
 #define WINDOW_HEIGHT 768
 
 #define ANGLE_SHIFT 7
