@@ -12,6 +12,7 @@
 #include <iterator>
 #include <memory>
 #include <algorithm>
+#include <climits>
 
 KDBData::Error KDTreeBuilder::BuildSectors(const Map &iMap)
 {
@@ -267,7 +268,7 @@ KDBData::Error KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
     return ret;
 }
 
-bool KDTreeBuilder::IsWallSetConvex(const std::list<KDBData::Wall> &iWalls)
+bool KDTreeBuilder::IsWallSetConvex(const std::list<KDBData::Wall> &iWalls) const
 {
     bool isConvex = true;
 
@@ -343,6 +344,29 @@ bool KDTreeBuilder::IsWallSetConvex(const std::list<KDBData::Wall> &iWalls)
     return isConvex;
 }
 
+void KDTreeBuilder::ComputeWallSetAABB(const std::list<KDBData::Wall> &iWalls, KDMapData::Vertex &oAABBMin, KDMapData::Vertex &oAABBMax) const
+{
+    oAABBMin.m_X = INT_MAX;
+    oAABBMin.m_Y = INT_MAX;
+
+    oAABBMax.m_X = -INT_MAX;
+    oAABBMax.m_Y = -INT_MAX;
+
+    for(const KDBData::Wall &wall : iWalls)
+    {
+        for (unsigned int i = 0; i < 2; i++)
+        {
+            const KDBData::Vertex &vertex = i == 0 ? wall.m_VertexFrom : wall.m_VertexTo;
+
+            oAABBMin.m_X = vertex.m_X < oAABBMin.m_X ? vertex.m_X : oAABBMin.m_X;
+            oAABBMin.m_Y = vertex.m_Y < oAABBMin.m_Y ? vertex.m_Y : oAABBMin.m_Y;
+
+            oAABBMax.m_X = vertex.m_X > oAABBMax.m_X ? vertex.m_X : oAABBMax.m_X;
+            oAABBMax.m_Y = vertex.m_Y > oAABBMax.m_Y ? vertex.m_Y : oAABBMax.m_Y;
+        }
+    }
+}
+
 KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWalls, KDTreeNode::SplitPlane iSplitPlane, KDTreeNode *&ioKDTreeNode)
 {
     if(!ioKDTreeNode)
@@ -353,6 +377,8 @@ KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWa
     {
         ioKDTreeNode->m_SplitPlane = KDTreeNode::SplitPlane::None;
         ioKDTreeNode->m_SplitOffset = 0; // Will never be used
+
+        ComputeWallSetAABB(iWalls, ioKDTreeNode->m_AABBMin, ioKDTreeNode->m_AABBMax);
 
         for (const KDBData::Wall &wall : iWalls)
         {
@@ -378,6 +404,11 @@ KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWa
     }
     else
     {
+        // Compute AABB
+        // A Top-down approach (or slicing the root bbox as we go) would be much smarter and efficient,
+        // but I don't care much for building performance, so here is a quick and dirty implem
+        ComputeWallSetAABB(iWalls, ioKDTreeNode->m_AABBMin, ioKDTreeNode->m_AABBMax);
+
         int splitOffset;
         std::list<KDBData::Wall> positiveSide, negativeSide, withinPlane;
         SplitWallSet(iWalls, iSplitPlane, splitOffset, positiveSide, negativeSide, withinPlane);
@@ -391,6 +422,7 @@ KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWa
             SplitWallSet(iWalls, iSplitPlane, splitOffset, positiveSide, negativeSide, withinPlane);
         }
 
+        // Add spliting wall(s) to node
         if (!withinPlane.empty())
         {
             ioKDTreeNode->m_SplitPlane = iSplitPlane;
@@ -416,6 +448,7 @@ KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWa
             }
         }
 
+        // Recursive build
         if (!positiveSide.empty())
         {
             ioKDTreeNode->m_PositiveSide = new KDTreeNode;

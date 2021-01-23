@@ -28,7 +28,8 @@ protected:
     void SplitWallSet(std::list<KDBData::Wall> &ioWalls, KDTreeNode::SplitPlane iSplitPlane,
                       int &oSplitOffset, std::list<KDBData::Wall> &oPositiveSide, std::list<KDBData::Wall> &oNegativeSide,
                       std::list<KDBData::Wall> &oWithinSplitPlane);
-    bool IsWallSetConvex(const std::list<KDBData::Wall> &iWalls);
+    bool IsWallSetConvex(const std::list<KDBData::Wall> &iWalls) const;
+    void ComputeWallSetAABB(const std::list<KDBData::Wall> &iWalls, KDMapData::Vertex &oAABBMin, KDMapData::Vertex &oAABBMax) const;
 
 protected:
     // Inputs/outputs

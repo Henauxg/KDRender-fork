@@ -29,6 +29,7 @@ unsigned int KDTreeNode::ComputeStreamSize() const
     streamSize += m_Walls.size() * sizeof(KDMapData::Wall);
     streamSize += sizeof(char); // m_SplitPlane
     streamSize += sizeof(int); // m_SplitOffset
+    streamSize += 2 * sizeof(KDMapData::Vertex); // m_AABBMin & m_AABBMax
 
     streamSize += sizeof(char); // Field that indicates whether there is a positive child
     if (m_PositiveSide)
@@ -60,6 +61,12 @@ void KDTreeNode::Stream(char *&ioData, unsigned int &oNbBytesWritten) const
 
     *(reinterpret_cast<int *>(ioData)) = m_SplitOffset;
     ioData += sizeof(int);
+
+    *(reinterpret_cast<KDMapData::Vertex *>(ioData)) = m_AABBMin;
+    ioData += sizeof(KDMapData::Vertex);
+
+    *(reinterpret_cast<KDMapData::Vertex *>(ioData)) = m_AABBMax;
+    ioData += sizeof(KDMapData::Vertex);
 
     *ioData = m_PositiveSide ? 0x1 : 0x0;
     ioData += sizeof(char);
@@ -102,6 +109,12 @@ void KDTreeNode::UnStream(const char *ipData, unsigned int &oNbBytesRead)
 
     m_SplitOffset = *(reinterpret_cast<const int *>(ipData));
     ipData += sizeof(unsigned int);
+
+    m_AABBMin = *(reinterpret_cast<const KDMapData::Vertex *>(ipData));
+    ipData += sizeof(KDMapData::Vertex);
+
+    m_AABBMax = *(reinterpret_cast<const KDMapData::Vertex *>(ipData));
+    ipData += sizeof(KDMapData::Vertex);
 
     char positiveSide = *ipData;
     ipData += sizeof(char);

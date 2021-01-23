@@ -103,6 +103,14 @@ protected:
     SplitPlane m_SplitPlane;
     int m_SplitOffset;
 
+    // Axis-aligned bounding box of the node
+    // Used by renderer for frustum culling
+    // For a KD-tree, it is easy to determine an AABB upon traversal. However,
+    // I want to make switching to generic BSPs not too hard if I decide to do it
+    // one day :)
+    KDMapData::Vertex m_AABBMin;
+    KDMapData::Vertex m_AABBMax;
+
     KDTreeNode *m_PositiveSide;
     KDTreeNode *m_NegativeSide;
 
