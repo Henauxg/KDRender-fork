@@ -159,5 +159,10 @@ void KDRData::HorizontalScreenSegments::InsertIntervalEnd(const IntervalEnd &iEn
 
 bool KDRData::HorizontalScreenSegments::IsScreenEntirelyDrawn() const
 {
-    return m_Segments.size() == 2 && m_Segments.back().m_X == 0 && m_Segments.front().m_X == WINDOW_WIDTH - 1;
+    return m_Segments.size() == 2 && m_Segments.front().m_X == 0 && m_Segments.back().m_X == WINDOW_WIDTH - 1;
+}
+
+void KDRData::HorizontalScreenSegments::Clear()
+{
+    m_Segments.clear();
 }

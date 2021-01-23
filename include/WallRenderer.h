@@ -13,7 +13,8 @@ public:
     virtual ~WallRenderer();
 
 public:
-    void SetBuffers(unsigned char *ipFrameBuffer, unsigned char *ipHorizOcclusionBuffer, int *ipTopOcclusionBuffer, int *ipBottomOcclusionBuffer);
+    void SetBuffers(unsigned char *ipFrameBuffer, unsigned char *ipHorizOcclusionBuffer, 
+                    KDRData::HorizontalScreenSegments *ipHorizDrawnSegs, int *ipTopOcclusionBuffer, int *ipBottomOcclusionBuffer);
     void Render(std::vector<KDRData::FlatSurface> &oGeneratedFlats);
 
 protected:
@@ -51,6 +52,7 @@ protected:
 
     unsigned char *m_pFrameBuffer;
     unsigned char *m_pHorizOcclusionBuffer;
+    KDRData::HorizontalScreenSegments *m_pHorizDrawnSegs; // TODO: makes m_pHorizOcclusionBuffer, get rid of m_pHorizOcclusionBuffer
     int *m_pTopOcclusionBuffer;
     int *m_pBottomOcclusionBuffer;
 

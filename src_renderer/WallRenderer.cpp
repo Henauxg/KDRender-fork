@@ -44,10 +44,12 @@ WallRenderer::~WallRenderer()
 
 }
 
-void WallRenderer::SetBuffers(unsigned char *ipFrameBuffer, unsigned char *ipHorizOcclusionBuffer, int *ipTopOcclusionBuffer, int *ipBottomOcclusionBuffer)
+void WallRenderer::SetBuffers(unsigned char *ipFrameBuffer, unsigned char *ipHorizOcclusionBuffer,
+                              KDRData::HorizontalScreenSegments *ipHorizDrawnSegs, int *ipTopOcclusionBuffer, int *ipBottomOcclusionBuffer)
 {
     m_pFrameBuffer = ipFrameBuffer;
     m_pHorizOcclusionBuffer = ipHorizOcclusionBuffer;
+    m_pHorizDrawnSegs = ipHorizDrawnSegs;
     m_pTopOcclusionBuffer = ipTopOcclusionBuffer;
     m_pBottomOcclusionBuffer = ipBottomOcclusionBuffer;
 }
@@ -222,6 +224,8 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
 
 void WallRenderer::RenderHardWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats)
 {
+    m_pHorizDrawnSegs->AddScreenSegment(m_MinX, m_maxX);
+
     CType eyeToTop = m_InSector.m_Ceiling - m_State.m_PlayerZ;
     CType eyeToBottom = m_State.m_PlayerZ - m_InSector.m_Floor;
 

@@ -65,6 +65,7 @@ namespace KDRData
     public:
         void AddScreenSegment(unsigned int iMinX, unsigned int iMaxX);
         bool IsScreenEntirelyDrawn() const;
+        void Clear();
 
     protected:
         struct IntervalEnd
@@ -96,7 +97,6 @@ namespace KDRData
         CType m_MaxColorInterpolationDist;
         CType m_HorizontalDistortionCst;
         CType m_VerticalDistortionCst;
-        CType m_NearPlane;
     };
 
     struct State
@@ -107,8 +107,6 @@ namespace KDRData
         KDRData::Vertex m_FrustumToLeft;
         KDRData::Vertex m_FrustumToRight;
         KDRData::Vertex m_Look;
-        KDRData::Vertex m_NearPlaneV1; // Two vertices that define the near clipping plane
-        KDRData::Vertex m_NearPlaneV2; // (actually clipping line)
     };
 
     Wall GetWallFromNode(KDTreeNode *ipNode, unsigned int iWallIdx);

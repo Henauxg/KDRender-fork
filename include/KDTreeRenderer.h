@@ -48,6 +48,7 @@ protected:
 
     unsigned char *m_pFrameBuffer;
     unsigned char m_pHorizOcclusionBuffer[WINDOW_WIDTH];
+    KDRData::HorizontalScreenSegments m_HorizDrawnSegs;
     int m_pTopOcclusionBuffer[WINDOW_WIDTH];
     int m_pBottomOcclusionBuffer[WINDOW_WIDTH];
 

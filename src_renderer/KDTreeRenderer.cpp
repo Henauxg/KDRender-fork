@@ -19,7 +19,6 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_Settings.m_MaxColorInterpolationDist = CType(500) / POSITION_SCALE;
     m_Settings.m_HorizontalDistortionCst = 1 / (2 * tanInt(m_Settings.m_PlayerHorizontalFOV / 2));
     m_Settings.m_VerticalDistortionCst = 1 / (2 * tanInt(m_Settings.m_PlayerVerticalFOV / 2));
-    m_Settings.m_NearPlane = CType(1) / POSITION_SCALE;
 
     memset(m_pFrameBuffer, 255u, sizeof(unsigned char) * 4u * WINDOW_HEIGHT * WINDOW_WIDTH);
     ClearBuffers();
@@ -49,6 +48,7 @@ void KDTreeRenderer::FillFrameBufferWithColor(unsigned char r, unsigned char g, 
 void KDTreeRenderer::ClearBuffers()
 {
     memset(m_pHorizOcclusionBuffer, 0u, sizeof(unsigned char) * WINDOW_WIDTH);
+    m_HorizDrawnSegs.Clear();
     memset(m_pTopOcclusionBuffer, 0, sizeof(int) * WINDOW_WIDTH);
     memset(m_pBottomOcclusionBuffer, 0, sizeof(int) * WINDOW_WIDTH);
     m_FlatSurfaces.clear();
@@ -57,7 +57,7 @@ void KDTreeRenderer::ClearBuffers()
 void KDTreeRenderer::RefreshFrameBuffer()
 {
     // Useful when debugging, useless and costly otherwise
-    // FillFrameBufferWithColor(0u, 0u, 0u);
+    // FillFrameBufferWithColor(255u, 0u, 255u);
     Render();
 }
 
@@ -79,7 +79,11 @@ void KDTreeRenderer::Render()
 
 void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
 {
-    // TODO: culling
+    // Occlusion culling
+    if(m_HorizDrawnSegs.IsScreenEntirelyDrawn())
+        return;
+
+    // TODO: frustum culling (use pre-computed AABB to make moving towards a generic BSP easier)
 
     bool positiveSide;
     if (pNode->m_SplitPlane == KDTreeNode::SplitPlane::XConst)
@@ -110,33 +114,9 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
         }
         else
         {
-            // First, clip against near plane
-            // If the wall is entirely behind the clipping plane, it has been rejected already
-            // if(vertexFromIsBehindNearPlane || vertexToIsBehindNearPlane)
-            // {
-            //     KDRData::Vertex intersectionVertex;
-            //     if (LineLineIntersection<KDRData::Vertex>(m_State.m_NearPlaneV1, m_State.m_NearPlaneV2, wall.m_VertexFrom, wall.m_VertexTo, intersectionVertex))
-            //     {
-            //         if (vertexFromIsBehindNearPlane)
-            //         {
-            //             if(wall.m_VertexFrom.m_X == wall.m_VertexTo.m_X)
-            //                 wall.m_VertexFrom.m_Y = intersectionVertex.m_Y;
-            //             else
-            //                 wall.m_VertexFrom.m_X = intersectionVertex.m_X;
-            //         }
-            //         else
-            //         {
-            //             if (wall.m_VertexFrom.m_X == wall.m_VertexTo.m_X)
-            //                 wall.m_VertexTo.m_Y = intersectionVertex.m_Y;
-            //             else
-            //                 wall.m_VertexTo.m_X = intersectionVertex.m_X;
-            //         }
-            //     }
-            // }
-
             std::vector<KDRData::FlatSurface> generatedFlats;
             WallRenderer wallRenderer(wall, m_State, m_Settings, m_Map);
-            wallRenderer.SetBuffers(m_pFrameBuffer, m_pHorizOcclusionBuffer, m_pTopOcclusionBuffer, m_pBottomOcclusionBuffer);
+            wallRenderer.SetBuffers(m_pFrameBuffer, m_pHorizOcclusionBuffer, &m_HorizDrawnSegs, m_pTopOcclusionBuffer, m_pBottomOcclusionBuffer);
             wallRenderer.Render(generatedFlats);
 
             for(KDRData::FlatSurface &flat : generatedFlats)
