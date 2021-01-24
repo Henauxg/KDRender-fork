@@ -102,6 +102,7 @@ void FlatSurfacesRenderer::Render()
 
         for (unsigned int i = 0; i < currentSurfaces.size(); i++)
         {
+            // Debug
             m_RDbg = count % 3 == 0 ? 160 : 0;
             m_GDbg = count % 3 == 1 ? 160 : 0;
             m_BDbg = count % 3 == 2 ? 160 : 0;
@@ -208,6 +209,7 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
     CType deltaTexelX, deltaTexelY;
     KDRData::Vertex leftmostTexel;
     int light;
+    unsigned int lightClamped;
 
     if (m_DistYCache[iY] >= 0)
     {
@@ -251,7 +253,7 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
     {
         unsigned int xOffsetFrameBuffer = (WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH;
         light = ((m_Settings.m_MaxColorInterpolationDist - dist) * maxColorRange) / m_Settings.m_MaxColorInterpolationDist;
-        light = Clamp(light, 45, maxColorRange);
+        lightClamped = Clamp(light, 45, maxColorRange);
 
         if (iSurface.m_TexId >= 0)
         {
@@ -270,16 +272,17 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
                 currTexelXClamped = currTexelX - ((currTexelX >> (xModShift)) << (xModShift));
                 currTexelYClamped = currTexelY - ((currTexelY >> (yModShift)) << (yModShift));
 
-                // (iTexelXClamped * (1u << m_pTexture->m_Height)) << 2u
-                r = texture.m_pData[(currTexelXClamped << xOffsetTexture) + (currTexelYClamped << 2u) + 0];
-                g = texture.m_pData[(currTexelXClamped << xOffsetTexture) + (currTexelYClamped << 2u) + 1];
-                b = texture.m_pData[(currTexelXClamped << xOffsetTexture) + (currTexelYClamped << 2u) + 2];
+                // I let the compiler optimize this (more efficient than my own optim)
+                unsigned texIdx = (currTexelXClamped << xOffsetTexture) + (currTexelYClamped << 2u);
+                r = texture.m_pData[texIdx];
+                g = texture.m_pData[texIdx + 1];
+                b = texture.m_pData[texIdx + 2];
 
                 // r = m_RDbg == 0 ? r : m_RDbg;
                 // g = m_GDbg == 0 ? g : m_GDbg;
                 // b = m_BDbg == 0 ? b : m_BDbg;
 
-                WriteFrameBuffer(xOffsetFrameBuffer + x, (light * r) >> 8u, (light * g) >> 8u, (light * b) >> 8u);
+                WriteFrameBuffer(xOffsetFrameBuffer + x, (lightClamped * r) >> 8u, (lightClamped * g) >> 8u, (lightClamped * b) >> 8u);
 
                 currTexelX = currTexelX + deltaTexelX;
                 currTexelY = currTexelY + deltaTexelY;
@@ -288,7 +291,7 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
         else
         {
             for (int x = iMinX; x <= iMaxX; x++)
-                WriteFrameBuffer(xOffsetFrameBuffer + x, (light * m_CurrSectorR) >> 8u, (light * m_CurrSectorG) >> 8u, (light * m_CurrSectorB) >> 8u);
+                WriteFrameBuffer(xOffsetFrameBuffer + x, (lightClamped * m_CurrSectorR) >> 8u, (lightClamped * m_CurrSectorG) >> 8u, (lightClamped * m_CurrSectorB) >> 8u);
         }
     }
 }

@@ -65,7 +65,7 @@ public:
 
     /* Quite a lot of redundancy, but I wanted the code to be fast enough even when
     compiler optimizations are turned off. I therefore tried to avoid making unecessary
-    objets or function calls */
+    constructor or function calls */
 
     friend constexpr FP32<P> operator<<(const FP32<P> &iN, unsigned int iShift)
     {

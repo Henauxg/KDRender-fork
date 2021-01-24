@@ -87,6 +87,11 @@ namespace
             m_Data.m_Sectors.back().m_Floor = iFloor;
         }
 
+        void SetSectorConstantLight(int iLightValue)
+        {
+
+        }
+
         void SetCurrentVertexCoordinates(boost::fusion::vector<int, int> &iPosition)
         {
             m_CurrentVertex.m_X = boost::fusion::at_c<0>(iPosition);
@@ -206,7 +211,8 @@ namespace
                     elevation |
                     defaultWallTexture |
                     ceilingTexture |
-                    floorTexture) >> 
+                    floorTexture |
+                    light) >> 
                     closeBracket [boost::bind(&ExpressionAccumulator::EndNewSector, &iAccumulator)]
                 ;
 
@@ -271,6 +277,20 @@ namespace
                 "ceilingTexture" >>
                 openBracket >>
                 bracketedString [boost::bind(&ExpressionAccumulator::SetCeilingTexture, &iAccumulator, _1)]>>
+                closeBracket
+                ;
+
+            light =
+                "light" >>
+                openBracket >>
+                constantLight [boost::bind(&ExpressionAccumulator::SetSectorConstantLight, &iAccumulator, _1)] >>
+                closeBracket
+                ;
+
+            constantLight =
+                "constant" >>
+                openBracket >>
+                qi::int_ >>
                 closeBracket
                 ;
 
@@ -355,6 +375,9 @@ namespace
         qi::rule<Iterator, ascii::space_type> defaultWallTexture;
         qi::rule<Iterator, ascii::space_type> floorTexture;
         qi::rule<Iterator, ascii::space_type> ceilingTexture;
+
+        qi::rule<Iterator, ascii::space_type> light;
+        qi::rule<Iterator, int(), ascii::space_type> constantLight;
 
         qi::rule<Iterator, ascii::space_type> openBracket, closeBracket;
         qi::rule<Iterator, ascii::space_type> vertex;

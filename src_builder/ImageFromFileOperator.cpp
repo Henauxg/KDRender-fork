@@ -47,9 +47,9 @@ KDBData::Error ImageFromFileOperator::Run(bool iIsTexture)
             {
                 for (unsigned int y = 0; y < m_Height; y++)
                 {
-                    // The textured is flipped before being stored into the map.
+                    // The texture is flipped before being stored into the map.
                     // This avoids cache-misses when texturing the walls (for the floors/ceiling,
-                    // this doesn't matter)
+                    // the orientation doesn't matter)
                     sf::Color c = image.getPixel(x, y);
                     m_pData[x * 4u * m_Height + y * 4u + 0] = c.r;
                     m_pData[x * 4u * m_Height + y * 4u + 1] = c.g;

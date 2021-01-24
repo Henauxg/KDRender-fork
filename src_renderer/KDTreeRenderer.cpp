@@ -235,8 +235,8 @@ CType KDTreeRenderer::RecursiveComputeZ(KDTreeNode *pNode)
         positiveSide = m_State.m_PlayerPosition.m_Y > (CType(pNode->m_SplitOffset) / POSITION_SCALE);
 
     // We are on a terminal node
-    // The node contains exactly walls oriented similarly and refering
-    // to the same sectors, which we are going to use to find out in which sector the player is
+    // The node contains walls oriented similarly and refering
+    // to the same sectors, which we are going to use to find out which sector the player is in
     if ((positiveSide && !pNode->m_PositiveSide) ||
         (!positiveSide && !pNode->m_NegativeSide))
     {

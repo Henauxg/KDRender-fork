@@ -165,14 +165,14 @@ void WallRenderer::RenderColumnWithTexture(CType iT, int iMinVertexLight, int iM
                                            int iMinY, int iMaxY, int iX,
                                            int iTexelXClamped, CType iMinTexelY, CType iMaxTexelY)
 {
-    int light = (iMinVertexLight * (1 - iT)) + iT * iMaxVertexLight;
+    unsigned int light = static_cast<int>((iMinVertexLight * (1 - iT)) + iT * iMaxVertexLight);
     CType tY, texelY = iMinTexelY;
     int texelYClamped;
     CType deltaTexelY = iMaxY == iMinY ? CType(1) : (iMaxTexelY - iMinTexelY) / CType(iMaxY - iMinY);
 
-    unsigned int textureIdxX = (iTexelXClamped * (1u << m_pTexture->m_Height)) << 2u;
+    unsigned int textureIdxX = iTexelXClamped << (m_pTexture->m_Height + 2u);
     unsigned int textureIdxY;
-    unsigned char r, g, b;
+    unsigned int r, g, b;
     for (unsigned int y = iMinY; y <= iMaxY; y++)
     {
         texelY = texelY + deltaTexelY;

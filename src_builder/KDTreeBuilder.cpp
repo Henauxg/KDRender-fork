@@ -406,7 +406,7 @@ KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWa
     {
         // Compute AABB
         // A Top-down approach (or slicing the root bbox as we go) would be much smarter and efficient,
-        // but I don't care much for building performance, so here is a quick and dirty implem
+        // but I don't care much for builder performance, so here is a quick and dirty implem
         ComputeWallSetAABB(iWalls, ioKDTreeNode->m_AABBMin, ioKDTreeNode->m_AABBMax);
 
         int splitOffset;
