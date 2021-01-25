@@ -34,6 +34,7 @@ KDBData::Error KDTreeBuilder::BuildSectors(const Map &iMap)
         sector.m_Floor = pMapData->m_Sectors[i].m_Floor;
         sector.m_CeilingTexId = pMapData->m_Sectors[i].m_CeilingTexId;
         sector.m_FloorTexId = pMapData->m_Sectors[i].m_FloorTexId;
+        sector.m_pLight = pMapData->m_Sectors[i].m_pLight;
 
         m_Sectors.push_back(sector);
     }
@@ -254,6 +255,7 @@ KDBData::Error KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
                     sector.floor = m_Sectors[i].m_Floor;
                     sector.ceilingTexId = m_Sectors[i].m_CeilingTexId;
                     sector.floorTexId = m_Sectors[i].m_FloorTexId;
+                    sector.m_pLight = m_Sectors[i].m_pLight;
                     oKDTree->m_Sectors.push_back(sector);
                 }
 
@@ -382,6 +384,7 @@ KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWa
 
         for (const KDBData::Wall &wall : iWalls)
         {
+            // TODO :refacto
             KDMapData::Wall kdWall;
 
             kdWall.m_From.m_X = wall.m_VertexFrom.m_X;
@@ -429,6 +432,7 @@ KDBData::Error KDTreeBuilder::RecursiveBuildKDTree(std::list<KDBData::Wall> &iWa
             ioKDTreeNode->m_SplitOffset = splitOffset;
             for (const KDBData::Wall &wall : withinPlane)
             {
+                // TODO: refacto
                 KDMapData::Wall kdWall;
 
                 kdWall.m_From.m_X = wall.m_VertexFrom.m_X;

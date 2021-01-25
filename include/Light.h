@@ -1,6 +1,8 @@
 #ifndef Light_h
 #define Light_h
 
+#include "Consts.h"
+
 // Abstract light class
 class Light
 {
@@ -28,6 +30,11 @@ public:
 protected:
     Type m_Type;
 };
+
+// Quite ugly workaround :/
+Light *UnstreamLight(const char *ipData, unsigned int &oNbBytesRead);
+
+CType GetMaxInterpolationDist(unsigned int iLightValue);
 
 // Constant light
 // Implements Light

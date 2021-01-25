@@ -5,10 +5,13 @@
 #ifndef Map_h
 #define Map_h
 
+#include "Light.h"
+
 #include <vector>
 #include <string>
 #include <utility>
 #include <map>
+#include <memory>
 
 class Map
 {
@@ -38,6 +41,8 @@ public:
 
             int m_FloorTexId;
             int m_CeilingTexId;
+
+            std::shared_ptr<Light> m_pLight;
         };
 
         struct Texture

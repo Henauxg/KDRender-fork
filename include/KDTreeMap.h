@@ -2,11 +2,14 @@
 #define KDTreeMap_h
 
 #include "Consts.h"
+#include "Light.h"
 
 #include <vector>
+#include <memory>
 
 namespace KDMapData
 {
+    // This will probably end up as a full-fledged class
     struct Sector
     {
         int floor;
@@ -14,6 +17,8 @@ namespace KDMapData
 
         int floorTexId;
         int ceilingTexId;
+
+        std::shared_ptr<Light> m_pLight;
     };
 
     struct Vertex

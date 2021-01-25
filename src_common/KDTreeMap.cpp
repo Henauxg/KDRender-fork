@@ -229,8 +229,23 @@ void KDTreeMap::Stream(char *&oData, unsigned int &oSize) const
 
         for (unsigned i = 0; i < m_Sectors.size(); i++)
         {
-            *(reinterpret_cast<KDMapData::Sector *>(pData)) = m_Sectors[i];
-            pData += sizeof(KDMapData::Sector);
+            *(reinterpret_cast<int *>(pData)) = m_Sectors[i].floor;
+            pData += sizeof(int);
+
+            *(reinterpret_cast<int *>(pData)) = m_Sectors[i].ceiling;
+            pData += sizeof(int);
+
+            *(reinterpret_cast<int *>(pData)) = m_Sectors[i].floorTexId;
+            pData += sizeof(int);
+
+            *(reinterpret_cast<int *>(pData)) = m_Sectors[i].ceilingTexId;
+            pData += sizeof(int);
+
+            if(m_Sectors[i].m_pLight) // Should always be true
+            {
+                unsigned int dummy;
+                m_Sectors[i].m_pLight->Stream(pData, dummy);
+            }
         }
 
         unsigned int dummy;
@@ -287,9 +302,25 @@ void KDTreeMap::UnStream(const char *iData, unsigned int &oNbBytesRead)
 
     for (unsigned int i = 0; i < nbSectors; i++)
     {
-        KDMapData::Sector sector = *(reinterpret_cast<const KDMapData::Sector *>(iData));
+        KDMapData::Sector sector;
+
+        sector.floor = *(reinterpret_cast<const int *>(iData));
+        iData += sizeof(int);
+
+        sector.ceiling = *(reinterpret_cast<const int *>(iData));
+        iData += sizeof(int);
+
+        sector.floorTexId = *(reinterpret_cast<const int *>(iData));
+        iData += sizeof(int);
+
+        sector.ceilingTexId = *(reinterpret_cast<const int *>(iData));
+        iData += sizeof(int);
+
+        unsigned int read = 0u;
+        sector.m_pLight = std::shared_ptr<Light>(UnstreamLight(iData, read));
+        iData += read;
+
         m_Sectors.push_back(sector);
-        iData += sizeof(KDMapData::Sector);
     }
 
     if (m_RootNode)
@@ -321,7 +352,14 @@ unsigned int KDTreeMap::ComputeStreamSize() const
     }
 
     streamSize += sizeof(unsigned int); // m_Sectors.size()
-    streamSize += m_Sectors.size() * sizeof(KDMapData::Sector);
+    streamSize += 4 * m_Sectors.size() * sizeof(int); // sector's floor, ceiling, floorTexId and ceilingTexId
+
+    // sector light
+    for (unsigned int i = 0; i < m_Sectors.size(); i++)
+    {
+        if(m_Sectors[i].m_pLight) // Should *always* be true
+            streamSize += m_Sectors[i].m_pLight->ComputeStreamSize();
+    }
 
     if (m_RootNode)
         streamSize += m_RootNode->ComputeStreamSize();

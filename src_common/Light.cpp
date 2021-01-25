@@ -20,15 +20,40 @@ unsigned int Light::ComputeStreamSize() const
 
 void Light::Stream(char *&ioData, unsigned int &oNbBytesWritten) const
 {
-    oNbBytesWritten = ComputeStreamSize();
+    oNbBytesWritten = Light::ComputeStreamSize();
     *(reinterpret_cast<Light::Type *>(ioData)) = m_Type;
     ioData += oNbBytesWritten;
 }
 
 void Light::UnStream(const char *ipData, unsigned int &oNbBytesRead)
 {
-    oNbBytesRead = ComputeStreamSize();
+    oNbBytesRead = Light::ComputeStreamSize();
     m_Type = *reinterpret_cast<const Light::Type *>(ipData);
+}
+
+Light *UnstreamLight(const char *ipData, unsigned int &oNbBytesRead)
+{
+    // First, look up type, DO NOT increment data pointer
+    Light::Type type = *(reinterpret_cast<const Light::Type *>(ipData));
+
+    // Instantiate light and unstream it
+    oNbBytesRead = 0u;
+    Light *pRet = nullptr;
+    switch (type)
+    {
+    case Light::Type::CONSTANT:
+        pRet = new ConstantLight(0u);
+        pRet->UnStream(ipData, oNbBytesRead);
+        break;
+    default: // Should never be reached 
+        break;
+    }
+    return pRet;
+}
+
+CType GetMaxInterpolationDist(unsigned int iLightValue)
+{
+    return CType(static_cast<int>(iLightValue)) * CType(3) / POSITION_SCALE;
 }
 
 // ****** ConstantLight *******

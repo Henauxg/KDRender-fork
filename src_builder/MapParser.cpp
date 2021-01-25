@@ -2,6 +2,7 @@
 
 #include "Map.h"
 #include "Consts.h"
+#include "Light.h"
 
 #include <boost/bind.hpp>
 #include <boost/config/warning_disable.hpp>
@@ -51,6 +52,14 @@ namespace
                 }
             }
 
+            // Sectors must have a light, so if the map designer hasn't provided one, we
+            // instantiate a default light
+            if(!sector.m_pLight)
+            {
+                ConstantLight *pConstantLight = new ConstantLight(180u);
+                sector.m_pLight = std::shared_ptr<Light>(pConstantLight);
+            }
+
             m_CurrentSectorDefaultWallTexId = -1;
         }
 
@@ -89,7 +98,8 @@ namespace
 
         void SetSectorConstantLight(int iLightValue)
         {
-
+            ConstantLight *pConstantLight = new ConstantLight(iLightValue);
+            m_Data.m_Sectors.back().m_pLight = std::shared_ptr<Light>(pConstantLight);
         }
 
         void SetCurrentVertexCoordinates(boost::fusion::vector<int, int> &iPosition)

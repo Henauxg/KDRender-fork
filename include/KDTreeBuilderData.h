@@ -2,9 +2,11 @@
 #define KDTreeBuilderData_h
 
 #include "Map.h"
+#include "Light.h"
 
 #include <vector>
 #include <list>
+#include <memory>
 
 namespace KDBData
 {
@@ -86,6 +88,8 @@ namespace KDBData
 
         int m_CeilingTexId;
         int m_FloorTexId;
+
+        std::shared_ptr<Light> m_pLight;
 
         enum class Relationship
         {

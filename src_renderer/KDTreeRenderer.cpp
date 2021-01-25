@@ -87,7 +87,7 @@ void KDTreeRenderer::RenderNode(KDTreeNode *pNode)
     if(DoFrustumCulling(pNode))
         return;
 
-    bool positiveSide;
+    bool positiveSide = false;
     if (pNode->m_SplitPlane == KDTreeNode::SplitPlane::XConst)
         positiveSide = m_State.m_PlayerPosition.m_X > (CType(pNode->m_SplitOffset) / POSITION_SCALE);
     else if (pNode->m_SplitPlane == KDTreeNode::SplitPlane::YConst)
