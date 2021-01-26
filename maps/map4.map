@@ -72,7 +72,7 @@ sector
     
     light
     {
-        constant {110}
+        constant {130}
     }
 }
 
@@ -146,6 +146,11 @@ sector
     defaultWallTexture {W65b1}
     ceilingTexture {W65b1}
     floorTexture {W65b1}
+    
+    light
+    {
+        constant {130}
+    }
 }
 
 sector
@@ -164,6 +169,11 @@ sector
     defaultWallTexture {W64b2}
     ceilingTexture {W64b2}
     floorTexture {W64b2}
+    
+    light
+    {
+        flickering {20, 180}
+    }
 }
 
 sector

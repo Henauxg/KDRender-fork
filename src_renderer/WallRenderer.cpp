@@ -182,9 +182,6 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
         return;
     m_MinDist = m_MinDist <= CType(0) ? CType(1) : m_MinDist;
 
-    m_MaxColorRange = m_Wall.m_VertexFrom.m_X == m_Wall.m_VertexTo.m_X ? 230 : 180;
-    m_MinColorRange = m_Wall.m_VertexFrom.m_X == m_Wall.m_VertexTo.m_X ? 55 : 50;
-
     m_WhichSide = WhichSide(m_Wall.m_VertexFrom, m_Wall.m_VertexTo, m_State.m_PlayerPosition);
 
     m_InSectorIdx = m_Wall.m_pKDWall->m_InSector;
@@ -193,10 +190,20 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
     m_OutSectorIdx = m_Wall.m_pKDWall->m_OutSector;
     m_OutSector = KDRData::GetSectorFromKDSector(m_Map.m_Sectors[m_OutSectorIdx]);
 
-    m_MinVertexColor = ((m_Settings.m_MaxColorInterpolationDist - m_MinDist) * m_MaxColorRange) / m_Settings.m_MaxColorInterpolationDist;
-    m_MaxVertexColor = ((m_Settings.m_MaxColorInterpolationDist - m_MaxDist) * m_MaxColorRange) / m_Settings.m_MaxColorInterpolationDist;
-    m_MinVertexColor = Clamp(m_MinVertexColor, m_MinColorRange, m_MaxColorRange);
-    m_MaxVertexColor = Clamp(m_MaxVertexColor, m_MinColorRange, m_MaxColorRange);
+    unsigned int sectorLightValue = 0u;
+    if(m_OutSectorIdx >= 0 && m_WhichSide < 0)
+        sectorLightValue = m_Map.m_Sectors[m_OutSectorIdx].m_pLight->GetValue();
+    else if(m_InSectorIdx >= 0 && m_WhichSide > 0)
+        sectorLightValue = m_Map.m_Sectors[m_InSectorIdx].m_pLight->GetValue();
+
+    int maxLightVal = sectorLightValue;
+    int minLightVal = LightTools::GetMinLight(maxLightVal);
+    CType maxColorInterpolationDist = LightTools::GetMaxInterpolationDist(maxLightVal);
+
+    m_MinVertexColor = ((maxColorInterpolationDist - m_MinDist) * maxLightVal) / maxColorInterpolationDist;
+    m_MaxVertexColor = ((maxColorInterpolationDist - m_MaxDist) * maxLightVal) / maxColorInterpolationDist;
+    m_MinVertexColor = Clamp(m_MinVertexColor, minLightVal, maxLightVal);
+    m_MaxVertexColor = Clamp(m_MaxVertexColor, minLightVal, maxLightVal);
 
     if(m_pTexture)
         m_YModShift = m_pTexture->m_Height + FP_SHIFT;

@@ -1,5 +1,7 @@
 #include "Light.h"
 
+#include "GeomUtils.h"
+
 // ****** Light *******
 
 Light::Light(Type iType):
@@ -45,22 +47,30 @@ Light *UnstreamLight(const char *ipData, unsigned int &oNbBytesRead)
         pRet = new ConstantLight(0u);
         pRet->UnStream(ipData, oNbBytesRead);
         break;
-    default: // Should never be reached 
+    case Light::Type::FLICKERING:
+        pRet = new FlickeringLight(0u, 0u);
+        pRet->UnStream(ipData, oNbBytesRead);
+        break;
+    default: // Should never be reached
         break;
     }
     return pRet;
 }
 
-CType GetMaxInterpolationDist(unsigned int iLightValue)
+CType LightTools::GetMaxInterpolationDist(unsigned int iLightValue)
 {
-    return CType(static_cast<int>(iLightValue)) * CType(3) / POSITION_SCALE;
+    return std::max<CType>(CType(static_cast<int>(iLightValue)) * CType(3) / POSITION_SCALE, CType(100) / POSITION_SCALE);
+}
+
+unsigned int LightTools::GetMinLight(unsigned int iLightValue)
+{
+    return Clamp<unsigned int>((iLightValue * iLightValue * iLightValue) / (255u * 255u), std::min<unsigned int>(50u, iLightValue), 230u);
 }
 
 // ****** ConstantLight *******
 
-ConstantLight::ConstantLight(unsigned int iValue):
-    Light(Light::Type::CONSTANT),
-    m_Value(iValue)
+ConstantLight::ConstantLight(unsigned int iValue) : Light(Light::Type::CONSTANT),
+                                                        m_Value(iValue)
 {   
 }
 
@@ -97,4 +107,54 @@ void ConstantLight::UnStream(const char *ipData, unsigned int &oNbBytesRead)
 unsigned int ConstantLight::GetValue() const
 {
     return m_Value;
+}
+
+// ****** FlickeringLight *******
+
+FlickeringLight::FlickeringLight(unsigned int iLow, unsigned int iHigh):
+    Light(Light::Type::FLICKERING),
+    m_Low(iLow),
+    m_High(iHigh)
+{
+}
+
+FlickeringLight::~FlickeringLight()
+{
+}
+
+unsigned int FlickeringLight::ComputeStreamSize() const
+{
+    return Light::ComputeStreamSize() + 2 * sizeof(unsigned int);
+}
+
+void FlickeringLight::Stream(char *&ioData, unsigned int &oNbBytesWritten) const
+{
+    oNbBytesWritten = 0;
+    Light::Stream(ioData, oNbBytesWritten);
+
+    *(reinterpret_cast<unsigned int *>(ioData)) = m_Low;
+    oNbBytesWritten += sizeof(unsigned int);
+    ioData += sizeof(unsigned int);
+
+    *(reinterpret_cast<unsigned int *>(ioData)) = m_High;
+    oNbBytesWritten += sizeof(unsigned int);
+    ioData += sizeof(unsigned int);
+}
+
+void FlickeringLight::UnStream(const char *ipData, unsigned int &oNbBytesRead)
+{
+    oNbBytesRead = 0;
+    Light::UnStream(ipData, oNbBytesRead);
+    ipData += oNbBytesRead;
+
+    oNbBytesRead += sizeof(unsigned int);
+    m_Low = *reinterpret_cast<const unsigned int *>(ipData);
+
+    oNbBytesRead += sizeof(unsigned int);
+    m_High = *reinterpret_cast<const unsigned int *>(ipData);
+}
+
+unsigned int FlickeringLight::GetValue() const
+{
+    return m_Low;
 }

@@ -17,7 +17,6 @@ public:
 
 public:
     void Render();
-    void RenderLegacy();
 
 protected:
     void DrawLine(int iY, int iMinX, int iMaxX, const KDRData::FlatSurface &iSurface);

@@ -125,7 +125,7 @@ inline int Angle(const Vertex &iFrom, const Vertex &iTo1, const Vertex &iTo2)
     CType det = Det(iFrom, iTo1, iFrom, iTo2);
     // Extremely non-optimized
     // TODO: implement lookup table
-    double angle = -atan2(det, dot);
+    double angle = -atan2(static_cast<float>(det), static_cast<float>(dot));
     return static_cast<int>(angle / M_PI * (180.0 * static_cast<float>((1 << ANGLE_SHIFT))));
 }
 

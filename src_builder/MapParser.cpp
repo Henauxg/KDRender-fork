@@ -102,6 +102,14 @@ namespace
             m_Data.m_Sectors.back().m_pLight = std::shared_ptr<Light>(pConstantLight);
         }
 
+        void SetSectorFlickeringLight(boost::fusion::vector<int, int> &iLowHigh)
+        {
+            int low = boost::fusion::at_c<0>(iLowHigh);
+            int high = boost::fusion::at_c<1>(iLowHigh);
+            FlickeringLight *pFlickeringLight = new FlickeringLight(low, high);
+            m_Data.m_Sectors.back().m_pLight = std::shared_ptr<Light>(pFlickeringLight);
+        }
+
         void SetCurrentVertexCoordinates(boost::fusion::vector<int, int> &iPosition)
         {
             m_CurrentVertex.m_X = boost::fusion::at_c<0>(iPosition);
@@ -257,8 +265,8 @@ namespace
                 "elevation" >> 
                 openBracket >> 
                 *(ceiling [boost::bind(&ExpressionAccumulator::SetSectorCeiling, &iAccumulator, _1)] |
-                    floor [boost::bind(&ExpressionAccumulator::SetSectorFloor, &iAccumulator, _1)]) >> 
-                    closeBracket
+                  floor [boost::bind(&ExpressionAccumulator::SetSectorFloor, &iAccumulator, _1)]) >> 
+                closeBracket
                 ;
 
             ceiling =
@@ -293,7 +301,8 @@ namespace
             light =
                 "light" >>
                 openBracket >>
-                constantLight [boost::bind(&ExpressionAccumulator::SetSectorConstantLight, &iAccumulator, _1)] >>
+                (constantLight [boost::bind(&ExpressionAccumulator::SetSectorConstantLight, &iAccumulator, _1)] |
+                flickeringLight [boost::bind(&ExpressionAccumulator::SetSectorFlickeringLight, &iAccumulator, _1)]) >>
                 closeBracket
                 ;
 
@@ -303,6 +312,15 @@ namespace
                 qi::int_ >>
                 closeBracket
                 ;
+
+            flickeringLight =
+                "flickering" >>
+                openBracket >>
+                qi::int_ >>
+                "," >>
+                qi::int_ >>
+                closeBracket
+            ;
 
             vertex =   
                 openBracket >>
@@ -388,6 +406,7 @@ namespace
 
         qi::rule<Iterator, ascii::space_type> light;
         qi::rule<Iterator, int(), ascii::space_type> constantLight;
+        qi::rule<Iterator, boost::fusion::vector<int, int>(), ascii::space_type> flickeringLight;
 
         qi::rule<Iterator, ascii::space_type> openBracket, closeBracket;
         qi::rule<Iterator, ascii::space_type> vertex;

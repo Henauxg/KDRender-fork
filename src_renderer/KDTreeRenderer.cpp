@@ -16,7 +16,6 @@ KDTreeRenderer::KDTreeRenderer(const KDTreeMap &iMap) :
     m_Settings.m_PlayerHorizontalFOV = 90 << ANGLE_SHIFT;
     m_Settings.m_PlayerVerticalFOV = (m_Settings.m_PlayerHorizontalFOV * WINDOW_HEIGHT) / WINDOW_WIDTH;
     m_Settings.m_PlayerHeight = CType(30) / POSITION_SCALE;
-    m_Settings.m_MaxColorInterpolationDist = CType(500) / POSITION_SCALE;
     m_Settings.m_HorizontalDistortionCst = 1 / (2 * tanInt(m_Settings.m_PlayerHorizontalFOV / 2));
     m_Settings.m_VerticalDistortionCst = 1 / (2 * tanInt(m_Settings.m_PlayerVerticalFOV / 2));
 

@@ -94,7 +94,6 @@ namespace KDRData
         int m_PlayerHorizontalFOV;
         int m_PlayerVerticalFOV;
         CType m_PlayerHeight;
-        CType m_MaxColorInterpolationDist;
         CType m_HorizontalDistortionCst;
         CType m_VerticalDistortionCst;
     };

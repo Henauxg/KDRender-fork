@@ -1,6 +1,7 @@
 #include "FlatSurfacesRenderer.h"
 
 #include "GeomUtils.h"
+#include "Light.h"
 
 FlatSurfacesRenderer::FlatSurfacesRenderer(const std::map<CType, std::vector<KDRData::FlatSurface>> &iFlatSurfaces, const KDRData::State &iState, const KDRData::Settings &iSettings, const KDTreeMap &iMap):
     m_FlatSurfaces(iFlatSurfaces),
@@ -20,62 +21,6 @@ void FlatSurfacesRenderer::SetBuffers(unsigned char *ipFrameBuffer, unsigned cha
     m_pHorizOcclusionBuffer = ipHorizOcclusionBuffer;
     m_pTopOcclusionBuffer = ipTopOcclusionBuffer;
     m_pBottomOcclusionBuffer = ipBottomOcclusionBuffer;
-}
-
-void FlatSurfacesRenderer::RenderLegacy()
-{
-    int vFovRad = ARITHMETIC_SHIFT(m_Settings.m_PlayerVerticalFOV, ANGLE_SHIFT) * (314 << FP_SHIFT) / (180 * 100);
-
-    for (const auto &keyVal : m_FlatSurfaces)
-    {
-        const std::vector<KDRData::FlatSurface> &currentSurfaces = keyVal.second;
-
-        for (unsigned int i = 0; i < currentSurfaces.size(); i++)
-        {
-            const KDRData::FlatSurface &currentSurface = currentSurfaces[i];
-
-            char r = currentSurface.m_SectorIdx % 3 == 0 ? 1 : 0;
-            char g = currentSurface.m_SectorIdx % 3 == 1 ? 1 : 0;
-            char b = currentSurface.m_SectorIdx % 3 == 2 ? 1 : 0;
-            int maxColorRange = 150;
-
-            int minY = WINDOW_HEIGHT;
-            int maxY = 0;
-            for (int x = currentSurface.m_MinX; x <= currentSurface.m_MaxX; x++)
-            {
-                minY = std::min(currentSurface.m_MinY[x], minY);
-                maxY = std::max(currentSurface.m_MaxY[x], maxY);
-            }
-
-            for (int y = minY; y < maxY; y++)
-            {
-                // double vFovRadD = ARITHMETIC_SHIFT(m_PlayerVerticalFOV, ANGLE_SHIFT) * M_PI / 180.0;
-                // double thetaD = (vFovRadD * (2.0 * y - WINDOW_HEIGHT)) / (2.0 * WINDOW_HEIGHT);
-                // double distD = std::abs(static_cast<double>(m_PlayerZ - m_FlatSurfaces[i].m_Height) / sin(thetaD));
-                // int colorD = ((m_MaxColorInterpolationDist - distD) * maxColorRange) / m_MaxColorInterpolationDist;
-
-                int theta = (m_Settings.m_PlayerVerticalFOV * (2 * y - WINDOW_HEIGHT)) / (2 * WINDOW_HEIGHT);
-                CType sinTheta = sinInt(theta);
-
-                if (sinTheta != 0)
-                {
-                    CType dist = (((m_State.m_PlayerZ - CType(currentSurface.m_Height))) / sinTheta);
-                    dist = dist < 0 ? -dist : dist;
-                    dist = std::min(dist, m_Settings.m_MaxColorInterpolationDist);
-                    int color = ((m_Settings.m_MaxColorInterpolationDist - dist) * maxColorRange) / m_Settings.m_MaxColorInterpolationDist;
-                    color = std::max(45, color);
-
-                    for (int x = currentSurface.m_MinX; x <= currentSurface.m_MaxX; x++)
-                    {
-                        if (y <= currentSurface.m_MaxY[x] && y >= currentSurface.m_MinY[x])
-                        {
-                            WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + x, color * r, color * g, color * b);
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 // #include <iostream>
@@ -203,8 +148,6 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
     if(iY == WINDOW_HEIGHT / 2)
         return;
 
-    int maxColorRange = 160;
-
     CType dist = -1;
     CType deltaTexelX, deltaTexelY;
     KDRData::Vertex leftmostTexel;
@@ -252,8 +195,14 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
     if (dist >= 0)
     {
         unsigned int xOffsetFrameBuffer = (WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH;
-        light = ((m_Settings.m_MaxColorInterpolationDist - dist) * maxColorRange) / m_Settings.m_MaxColorInterpolationDist;
-        lightClamped = Clamp(light, 45, maxColorRange);
+
+        int sectorLightValue = m_Map.m_Sectors[iSurface.m_SectorIdx].m_pLight->GetValue();
+        int maxLight = sectorLightValue;
+        int minLight = LightTools::GetMinLight(maxLight);
+        CType maxColorInterpolationDist = LightTools::GetMaxInterpolationDist(maxLight);
+        // m_MinVertexColor = ((maxColorInterpolationDist - m_MinDist) * maxLightVal) / maxColorInterpolationDist;
+        int light = ((maxColorInterpolationDist - dist) * maxLight) / maxColorInterpolationDist;
+        light = Clamp(light, minLight, maxLight);
 
         if (iSurface.m_TexId >= 0)
         {
@@ -282,7 +231,7 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
                 // g = m_GDbg == 0 ? g : m_GDbg;
                 // b = m_BDbg == 0 ? b : m_BDbg;
 
-                WriteFrameBuffer(xOffsetFrameBuffer + x, (lightClamped * r) >> 8u, (lightClamped * g) >> 8u, (lightClamped * b) >> 8u);
+                WriteFrameBuffer(xOffsetFrameBuffer + x, (light * r) >> 8u, (light * g) >> 8u, (light * b) >> 8u);
 
                 currTexelX = currTexelX + deltaTexelX;
                 currTexelY = currTexelY + deltaTexelY;
@@ -291,7 +240,7 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
         else
         {
             for (int x = iMinX; x <= iMaxX; x++)
-                WriteFrameBuffer(xOffsetFrameBuffer + x, (lightClamped * m_CurrSectorR) >> 8u, (lightClamped * m_CurrSectorG) >> 8u, (lightClamped * m_CurrSectorB) >> 8u);
+                WriteFrameBuffer(xOffsetFrameBuffer + x, (light * m_CurrSectorR) >> 8u, (light * m_CurrSectorG) >> 8u, (light * m_CurrSectorB) >> 8u);
         }
     }
 }

@@ -9,7 +9,8 @@ class Light
 public:
     enum class Type
     {
-        CONSTANT
+        CONSTANT,
+        FLICKERING
     };
 
 public:
@@ -34,7 +35,11 @@ protected:
 // Quite ugly workaround :/
 Light *UnstreamLight(const char *ipData, unsigned int &oNbBytesRead);
 
-CType GetMaxInterpolationDist(unsigned int iLightValue);
+namespace LightTools
+{
+    CType GetMaxInterpolationDist(unsigned int iLightValue);
+    unsigned int GetMinLight(unsigned int iLightValue);
+} // namespace LightTools
 
 // Constant light
 // Implements Light
@@ -54,6 +59,27 @@ public:
 
 protected:
     unsigned int m_Value;
+};
+
+// FlickeringLight
+// Implement
+class FlickeringLight : public Light
+{
+public:
+    FlickeringLight(unsigned int iLow, unsigned int iHigh);
+    virtual ~FlickeringLight();
+
+public:
+    virtual unsigned int ComputeStreamSize() const override;
+    virtual void Stream(char *&ioData, unsigned int &oNbBytesWritten) const override;
+    virtual void UnStream(const char *ipData, unsigned int &oNbBytesRead) override;
+
+public:
+    virtual unsigned int GetValue() const override;
+
+protected:
+    unsigned int m_Low;
+    unsigned int m_High;
 };
 
 #endif

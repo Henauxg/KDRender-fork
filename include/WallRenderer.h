@@ -74,8 +74,6 @@ protected:
     CType m_MinDist;
     CType m_MaxDist;
 
-    int m_MaxColorRange;
-    int m_MinColorRange;
     int m_MinVertexColor;
     int m_MaxVertexColor;
 
@@ -138,7 +136,7 @@ void WallRenderer::ComputeTextureParameters(CType iT, int iMinY, int iMaxY,
     oTexelXClamped = texelX - ((texelX >> xModShift) << xModShift);
     oMinTexelY = ((iBottomZ + m_TexVOffset) * CType(int(1u << m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
     oMaxTexelY = ((iTopZ + m_TexVOffset) * CType(int(1u << m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
-    if (m_pTexture && iMaxYUnclamped != iMinYUnclamped)
+    if (m_pTexture && CType(iMaxYUnclamped - iMinYUnclamped))
     {
         // Clamp
         CType tMin = (CType(iMinY) - CType(iMinYUnclamped)) / (CType(iMaxYUnclamped - iMinYUnclamped));
