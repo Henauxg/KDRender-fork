@@ -200,6 +200,12 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
     int minLightVal = LightTools::GetMinLight(maxLightVal);
     CType maxColorInterpolationDist = LightTools::GetMaxInterpolationDist(maxLightVal);
 
+    if (m_Wall.m_VertexFrom.m_X == m_Wall.m_VertexTo.m_X)
+    {
+        maxLightVal = maxLightVal * 85 / 100;
+        minLightVal = minLightVal * 85 / 100;
+    }
+
     m_MinVertexColor = ((maxColorInterpolationDist - m_MinDist) * maxLightVal) / maxColorInterpolationDist;
     m_MaxVertexColor = ((maxColorInterpolationDist - m_MaxDist) * maxLightVal) / maxColorInterpolationDist;
     m_MinVertexColor = Clamp(m_MinVertexColor, minLightVal, maxLightVal);

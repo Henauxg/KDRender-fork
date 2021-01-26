@@ -116,6 +116,7 @@ FlickeringLight::FlickeringLight(unsigned int iLow, unsigned int iHigh):
     m_Low(iLow),
     m_High(iHigh)
 {
+    m_Clock.restart();
 }
 
 FlickeringLight::~FlickeringLight()
@@ -149,6 +150,7 @@ void FlickeringLight::UnStream(const char *ipData, unsigned int &oNbBytesRead)
 
     oNbBytesRead += sizeof(unsigned int);
     m_Low = *reinterpret_cast<const unsigned int *>(ipData);
+    ipData += sizeof(unsigned int);
 
     oNbBytesRead += sizeof(unsigned int);
     m_High = *reinterpret_cast<const unsigned int *>(ipData);
@@ -156,5 +158,17 @@ void FlickeringLight::UnStream(const char *ipData, unsigned int &oNbBytesRead)
 
 unsigned int FlickeringLight::GetValue() const
 {
-    return m_Low;
+    int elapsedTime = m_Clock.getElapsedTime().asMilliseconds() % 4000;
+    unsigned int val = m_Low;
+
+    if (elapsedTime <= 100)
+        val = m_High;
+    else if (1000 <= elapsedTime && elapsedTime <= 1150)
+        val = m_High;
+    else if (1500 <= elapsedTime && elapsedTime <= 1600)
+        val = m_High;
+    else if (3200 <= elapsedTime && elapsedTime <= 3250)
+        val = m_High;
+
+    return val;
 }

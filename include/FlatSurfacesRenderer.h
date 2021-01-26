@@ -33,6 +33,12 @@ protected:
     int *m_pTopOcclusionBuffer;
     int *m_pBottomOcclusionBuffer;
 
+    // Light infos
+    int m_SectorLightValue;
+    int m_MaxLight;
+    int m_MinLight;
+    CType m_MaxColorInterpolationDist;
+
     // Caches
     int m_LinesXStart[WINDOW_HEIGHT];
     CType m_DistYCache[WINDOW_HEIGHT];

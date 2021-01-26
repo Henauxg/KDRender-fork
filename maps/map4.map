@@ -72,7 +72,7 @@ sector
     
     light
     {
-        constant {130}
+        constant {140}
     }
 }
 
@@ -172,7 +172,7 @@ sector
     
     light
     {
-        flickering {20, 180}
+        flickering {25, 230}
     }
 }
 

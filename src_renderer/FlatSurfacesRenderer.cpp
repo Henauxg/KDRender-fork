@@ -57,7 +57,12 @@ void FlatSurfacesRenderer::Render()
             m_CurrSectorR = 255;
             m_CurrSectorG = 255;
             m_CurrSectorB = 255;
-            
+
+            m_SectorLightValue = m_Map.m_Sectors[currentSurfaces[i].m_SectorIdx].m_pLight->GetValue();
+            m_MaxLight = m_SectorLightValue * 90 / 100;
+            m_MinLight = LightTools::GetMinLight(m_MaxLight) * 90 / 100;
+            m_MaxColorInterpolationDist = LightTools::GetMaxInterpolationDist(m_MaxLight);
+
             if(currentSurfaces[i].m_TexId != -1)
             {
                 unsigned int hIdx = m_Map.m_Textures[currentSurfaces[i].m_TexId].m_Height;
@@ -195,14 +200,9 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
     if (dist >= 0)
     {
         unsigned int xOffsetFrameBuffer = (WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH;
-
-        int sectorLightValue = m_Map.m_Sectors[iSurface.m_SectorIdx].m_pLight->GetValue();
-        int maxLight = sectorLightValue;
-        int minLight = LightTools::GetMinLight(maxLight);
-        CType maxColorInterpolationDist = LightTools::GetMaxInterpolationDist(maxLight);
         // m_MinVertexColor = ((maxColorInterpolationDist - m_MinDist) * maxLightVal) / maxColorInterpolationDist;
-        int light = ((maxColorInterpolationDist - dist) * maxLight) / maxColorInterpolationDist;
-        light = Clamp(light, minLight, maxLight);
+        int light = ((m_MaxColorInterpolationDist - dist) * m_MaxLight) / m_MaxColorInterpolationDist;
+        light = Clamp(light, m_MinLight, m_MaxLight);
 
         if (iSurface.m_TexId >= 0)
         {

@@ -3,6 +3,8 @@
 
 #include "Consts.h"
 
+#include <SFML/System.hpp>
+
 // Abstract light class
 class Light
 {
@@ -80,6 +82,7 @@ public:
 protected:
     unsigned int m_Low;
     unsigned int m_High;
+    sf::Clock m_Clock;
 };
 
 #endif
