@@ -282,6 +282,11 @@ sector
     defaultWallTexture {W64b2}
     ceilingTexture {W64b2}
     floorTexture {W64b2}
+    
+    light
+    {
+        flickering {255, 140}
+    }
 }
 
 sector
@@ -300,6 +305,11 @@ sector
     defaultWallTexture {W64b2}
     ceilingTexture {W64b2}
     floorTexture {W64b2}
+    
+    light
+    {
+        flickering {255, 140}
+    }
 }
 
 sector
