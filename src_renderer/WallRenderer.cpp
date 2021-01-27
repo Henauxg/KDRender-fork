@@ -178,9 +178,8 @@ void WallRenderer::RenderWall(std::vector<KDRData::FlatSurface> &oGeneratedFlats
 
     // TODO: perform actual clipping
     // Dirty hack
-    if (m_MaxDist <= 0)
+    if (m_MaxDist <= 0 || m_MinDist <= 0)
         return;
-    m_MinDist = m_MinDist <= CType(0) ? CType(1) : m_MinDist;
 
     m_WhichSide = WhichSide(m_Wall.m_VertexFrom, m_Wall.m_VertexTo, m_State.m_PlayerPosition);
 
