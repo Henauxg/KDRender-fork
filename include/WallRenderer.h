@@ -136,13 +136,14 @@ void WallRenderer::ComputeTextureParameters(CType iT, int iMinY, int iMaxY,
     oTexelXClamped = texelX - ((texelX >> xModShift) << xModShift);
     oMinTexelY = ((iBottomZ + m_TexVOffset) * CType(int(1u << m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
     oMaxTexelY = ((iTopZ + m_TexVOffset) * CType(int(1u << m_pTexture->m_Height)) * CType(POSITION_SCALE)) / CType(TEXEL_SCALE);
-    if (m_pTexture && CType(iMaxYUnclamped - iMinYUnclamped))
+    if (m_pTexture && iMaxYUnclamped - iMinYUnclamped)
     {
         // Clamp
-        CType tMin = (CType(iMinY) - CType(iMinYUnclamped)) / (CType(iMaxYUnclamped - iMinYUnclamped));
+        // 13-bit left shift has been chosen to minimize glitches
+        CType tMin = (((iMinY - iMinYUnclamped) << 13) / (iMaxYUnclamped - iMinYUnclamped)) / CType(1 << 13);
         CType minTexelYBackup = oMinTexelY;
         oMinTexelY = (1 - tMin) * oMinTexelY + tMin * oMaxTexelY;
-        CType tMax = (CType(iMaxYUnclamped) - CType(iMaxY)) / (CType(iMaxYUnclamped - iMinYUnclamped));
+        CType tMax = (((iMaxYUnclamped - iMaxY) << 13) / (iMaxYUnclamped - iMinYUnclamped)) / CType(1 << 13);
         oMaxTexelY = (1 - tMax) * oMaxTexelY + tMax * minTexelYBackup;
     }
 }
