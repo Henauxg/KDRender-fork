@@ -181,3 +181,12 @@ void KDRData::HorizontalScreenSegments::Clear()
 {
     m_Segments.clear();
 }
+
+KDRData::SpriteClippingSegment::SpriteClippingSegment():
+    m_Boundary(BoundaryType::NONE)
+{
+}
+
+KDRData::SpriteClippingSegment::~SpriteClippingSegment()
+{
+}

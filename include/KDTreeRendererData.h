@@ -6,6 +6,7 @@
 #include "KDTreeMap.h"
 
 #include <list>
+#include <vector>
 
 namespace KDRData
 {
@@ -53,6 +54,34 @@ namespace KDRData
         CType m_Height;
         int m_SectorIdx;
         int m_TexId;
+    };
+
+    // For sprite clipping
+    // Doom-inspired as well
+    class SpriteClippingSegment
+    {
+    public:
+        SpriteClippingSegment();
+        virtual ~SpriteClippingSegment();
+
+    public:
+        enum class BoundaryType
+        {
+            NONE,
+            TOP,
+            BOTTOM
+        };
+
+    public:
+        int m_LeftX;
+        int m_RightX;
+
+        int m_LeftDist;
+        int m_RightDist;
+
+        BoundaryType m_Boundary;
+        int m_LeftYBoundary;
+        int m_RightYBoundary;
     };
 
     // For horizontal occlusion
