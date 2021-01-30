@@ -15,7 +15,8 @@ namespace
     public:
         ExpressionAccumulator(Map::Data &oData):
             m_Data(oData),
-            m_CurrentSectorDefaultWallTexId(-1)
+            m_CurrentSectorDefaultWallTexId(-1),
+            m_pCurrentLight(nullptr)
         {
         }
         
@@ -52,6 +53,9 @@ namespace
                 }
             }
 
+            if(m_pCurrentLight)
+                sector.m_pLight = std::shared_ptr<Light>(m_pCurrentLight);
+
             // Sectors must have a light, so if the map designer hasn't provided one, we
             // instantiate a default light
             if(!sector.m_pLight)
@@ -61,6 +65,7 @@ namespace
             }
 
             m_CurrentSectorDefaultWallTexId = -1;
+            m_pCurrentLight = nullptr;
         }
 
         void SetDefaultWallTexture(std::string &iName)
@@ -96,18 +101,16 @@ namespace
             m_Data.m_Sectors.back().m_Floor = iFloor;
         }
 
-        void SetSectorConstantLight(int iLightValue)
+        void SetConstantLight(int iLightValue)
         {
-            ConstantLight *pConstantLight = new ConstantLight(iLightValue);
-            m_Data.m_Sectors.back().m_pLight = std::shared_ptr<Light>(pConstantLight);
+            m_pCurrentLight = new ConstantLight(iLightValue);
         }
 
-        void SetSectorFlickeringLight(boost::fusion::vector<int, int> &iLowHigh)
+        void SetFlickeringLight(boost::fusion::vector<int, int> &iLowHigh)
         {
             int low = boost::fusion::at_c<0>(iLowHigh);
             int high = boost::fusion::at_c<1>(iLowHigh);
-            FlickeringLight *pFlickeringLight = new FlickeringLight(low, high);
-            m_Data.m_Sectors.back().m_pLight = std::shared_ptr<Light>(pFlickeringLight);
+            m_pCurrentLight = new FlickeringLight(low, high);
         }
 
         void SetCurrentVertexCoordinates(boost::fusion::vector<int, int> &iPosition)
@@ -186,6 +189,7 @@ namespace
         int m_CurrentSectorDefaultWallTexId;
 
         Map::Data::Sector::Vertex m_CurrentVertex;
+        Light *m_pCurrentLight;
     };
 
     namespace qi = boost::spirit::qi;
@@ -198,7 +202,7 @@ namespace
         {
             expression =
                 player >> 
-                *(texture) >>
+                *(texture | sprite) >>
                 *(sector)
                 ;
             
@@ -224,14 +228,14 @@ namespace
             sector =
                 "sector" >> 
                 openBracket [boost::bind(&ExpressionAccumulator::PushNewSector, &iAccumulator)] >>
-                    *(hole | 
-                    outline | 
-                    elevation |
-                    defaultWallTexture |
-                    ceilingTexture |
-                    floorTexture |
-                    light) >> 
-                    closeBracket [boost::bind(&ExpressionAccumulator::EndNewSector, &iAccumulator)]
+                *(hole | 
+                outline | 
+                elevation |
+                defaultWallTexture |
+                ceilingTexture |
+                floorTexture |
+                light) >> 
+                closeBracket [boost::bind(&ExpressionAccumulator::EndNewSector, &iAccumulator)]
                 ;
 
             outline =
@@ -301,8 +305,8 @@ namespace
             light =
                 "light" >>
                 openBracket >>
-                (constantLight [boost::bind(&ExpressionAccumulator::SetSectorConstantLight, &iAccumulator, _1)] |
-                flickeringLight [boost::bind(&ExpressionAccumulator::SetSectorFlickeringLight, &iAccumulator, _1)]) >>
+                (constantLight [boost::bind(&ExpressionAccumulator::SetConstantLight, &iAccumulator, _1)] |
+                flickeringLight [boost::bind(&ExpressionAccumulator::SetFlickeringLight, &iAccumulator, _1)]) >>
                 closeBracket
                 ;
 
@@ -355,22 +359,66 @@ namespace
             texture =
                 "texture" >>  
                 openBracket [boost::bind(&ExpressionAccumulator::PushNewTexture, &iAccumulator)] >>
-                textureName >>
-                texturePath >>
+                name [boost::bind(&ExpressionAccumulator::SetTextureName, &iAccumulator, _1)] >>
+                path [boost::bind(&ExpressionAccumulator::SetTexturePath, &iAccumulator, _1)] >>
                 closeBracket
                 ;
 
-            textureName =
+            sprite =
+                "sprite" >>
+                openBracket >>
+                *(name | 
+                 light |
+                 spriteState) >>
+                closeBracket
+                ;
+
+            spriteState =
+                "state" >>
+                openBracket >>
+                name >>
+                *(imageSet) >>
+                closeBracket
+                ;
+
+            imageSet =
+                "imageSet" >>
+                openBracket >>
+                viewDirection >>
+                *(subSpriteInfos) >>
+                closeBracket
+                ;
+
+            viewDirection =
+                "viewDirection" >>
+                openBracket >>
+                vertexCoordinates >>
+                closeBracket
+                ;
+
+            subSpriteInfos =
+                path >>
+                duration
+                ;
+
+            duration =
+                "duration" >>
+                openBracket >>
+                qi::int_ >>
+                closeBracket
+                ;
+
+            name =
                 "name" >> 
                 openBracket >>
-                bracketedString [boost::bind(&ExpressionAccumulator::SetTextureName, &iAccumulator, _1)] >> 
+                bracketedString >> 
                 closeBracket
                 ;
 
-            texturePath =
+            path =
                 "path" >>
                 openBracket >>
-                bracketedString [boost::bind(&ExpressionAccumulator::SetTexturePath, &iAccumulator, _1)] >>
+                bracketedString >>
                 closeBracket
                 ;
 
@@ -416,8 +464,16 @@ namespace
         qi::rule<Iterator, ascii::space_type> vertexNoTexture;
 
         qi::rule<Iterator, ascii::space_type> texture;
-        qi::rule<Iterator, ascii::space_type> textureName;
-        qi::rule<Iterator, ascii::space_type> texturePath;
+
+        qi::rule<Iterator, ascii::space_type> sprite;
+        qi::rule<Iterator, ascii::space_type> spriteState;
+        qi::rule<Iterator, ascii::space_type> imageSet;
+        qi::rule<Iterator, ascii::space_type> viewDirection;
+        qi::rule<Iterator, ascii::space_type> subSpriteInfos;
+        qi::rule<Iterator, ascii::space_type> duration;
+
+        qi::rule<Iterator, std::string(), ascii::space_type> name;
+        qi::rule<Iterator, std::string(), ascii::space_type> path;
 
         qi::rule<Iterator, std::string(), ascii::space_type> bracketedString;
     };

@@ -49,6 +49,38 @@ texture
     path {maps/textures/ceil3_1.png}
 }
 
+sprite
+{
+    name {Smrt}
+    
+    light
+    {
+        constant {230}
+    }
+    
+    state
+    {
+        name {Idle}
+        
+        imageSet
+        {
+            viewDirection {0, 359}
+            
+            path {maps/textures/sprites/smrt/smrta0.png}
+            duration {150}
+            
+            path {maps/textures/sprites/smrt/smrtb0.png}
+            duration {150}
+            
+            path {maps/textures/sprites/smrt/smrtc0.png}
+            duration {150}
+            
+            path {maps/textures/sprites/smrt/smrtd0.png}
+            duration {150}
+        }
+    }
+}
+
 sector
 {
     outline

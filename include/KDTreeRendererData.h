@@ -32,7 +32,7 @@ namespace KDRData
         const KDMapData::Sector *m_pKDSector;
     };
 
-    // Totally doom-inspired (Doom calls these 'Visplanes')
+    // Totally Doom-inspired (Doom calls these 'Visplanes')
     // See Fabien Sanglard's really good book about the Doom Engine :)
     class FlatSurface
     {
