@@ -203,7 +203,7 @@ namespace
             expression =
                 player >> 
                 *(texture | sprite) >>
-                *(sector)
+                *(sector | object)
                 ;
             
             player =
@@ -408,6 +408,28 @@ namespace
                 closeBracket
                 ;
 
+            object =
+                "object" >>
+                openBracket >>
+                objectSprite >>
+                objectCoordinates >>
+                closeBracket
+                ;
+
+            objectSprite =
+                "sprite" >>
+                openBracket >>
+                bracketedString >>
+                closeBracket
+                ;
+
+            objectCoordinates =
+                "coordinates" >>
+                openBracket >>
+                vertexCoordinates >>
+                closeBracket
+                ;
+
             name =
                 "name" >> 
                 openBracket >>
@@ -471,6 +493,10 @@ namespace
         qi::rule<Iterator, ascii::space_type> viewDirection;
         qi::rule<Iterator, ascii::space_type> subSpriteInfos;
         qi::rule<Iterator, ascii::space_type> duration;
+
+        qi::rule<Iterator, ascii::space_type> object;
+        qi::rule<Iterator, ascii::space_type> objectSprite;
+        qi::rule<Iterator, ascii::space_type> objectCoordinates;
 
         qi::rule<Iterator, std::string(), ascii::space_type> name;
         qi::rule<Iterator, std::string(), ascii::space_type> path;

@@ -81,6 +81,12 @@ sprite
     }
 }
 
+object
+{
+    sprite {Smrt}
+    coordinates {-169, -266}
+}
+
 sector
 {
     outline
