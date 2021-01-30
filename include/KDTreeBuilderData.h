@@ -17,6 +17,7 @@ namespace KDBData
         SECTOR_INTERSECTION,
         CANNOT_BREAK_WALL,
         CANNOT_LOAD_TEXTURE,
+        CANNOT_LOAD_SPRITE,
         UNKNOWN_FAILURE
     };
 
