@@ -21,7 +21,7 @@ Sprite::~Sprite()
     }
 }
 
-KDBData::Error Sprite::LoadAllFromPaths()
+bool Sprite::LoadAllFromPaths()
 {
     bool everyThingWentFine = false;
 
@@ -31,10 +31,7 @@ KDBData::Error Sprite::LoadAllFromPaths()
             everyThingWentFine = false;
     }
 
-    if(!everyThingWentFine)
-        return KDBData::Error::CANNOT_LOAD_SPRITE;
-    else
-        return KDBData::Error::OK;
+    return everyThingWentFine;
 }
 
 void Sprite::AddState(State *ipState)

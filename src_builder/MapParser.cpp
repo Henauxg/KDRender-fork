@@ -3,6 +3,7 @@
 #include "Map.h"
 #include "Consts.h"
 #include "Light.h"
+#include "Sprite.h"
 
 #include <boost/bind.hpp>
 #include <boost/config/warning_disable.hpp>
@@ -182,11 +183,18 @@ namespace
             m_Data.m_Textures.back().m_Path = iPath;
         }
 
+        void PushNewSprite()
+        {
+            
+        }
+
     public:
         Map::Data &m_Data;
 
         std::map<std::string, int> m_MapTextureToTexId;
         int m_CurrentSectorDefaultWallTexId;
+
+        std::map<std::string, int> m_MapSpriteToSpriteId;
 
         Map::Data::Sector::Vertex m_CurrentVertex;
         Light *m_pCurrentLight;

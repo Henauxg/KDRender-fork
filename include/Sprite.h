@@ -2,7 +2,6 @@
 #define Sprite_h
 
 #include "Light.h"
-#include "KDTreeBuilderData.h"
 
 #include <vector>
 
@@ -64,7 +63,7 @@ public:
     const State* GetState(State::Name iState) const;
 
 public:
-    KDBData::Error LoadAllFromPaths();
+    bool LoadAllFromPaths();
 
 protected:
     Light *m_pLight;
