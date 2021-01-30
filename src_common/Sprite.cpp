@@ -27,7 +27,7 @@ KDBData::Error Sprite::LoadAllFromPaths()
 
     for (unsigned int i = 0; i < m_States.size(); i++)
     {
-        if(!m_States[i] || !m_States[i]->LoadAllFromPaths())
+        if(!m_States[i] || !m_States[i]->LoadAllFromPaths(m_Width, m_Height))
             everyThingWentFine = false;
     }
 
@@ -69,13 +69,26 @@ void Sprite::State::AddImageSet(const ImageSet &iImageSet)
     m_ImageSets.push_back(iImageSet);
 }
 
-bool Sprite::State::LoadAllFromPaths()
+bool Sprite::State::LoadAllFromPaths(unsigned int &oWidth, unsigned int &oHeight)
 {
     bool everyThingWentFine = true;
+    oWidth = 0;
+    oHeight = 0;
 
     for (unsigned int i = 0; i < m_ImageSets.size(); i++)
     {
-        if(!m_ImageSets[i].LoadAllFromPaths())
+        unsigned int localWidth;
+        unsigned int localHeight;
+
+        if(!m_ImageSets[i].LoadAllFromPaths(localWidth, localHeight))
+            everyThingWentFine = false;
+
+        if (i == 0)
+        {
+            oWidth = localWidth;
+            oHeight = localHeight;
+        }
+        else if (localHeight != oHeight || localWidth != oWidth)
             everyThingWentFine = false;
     }
 
@@ -117,18 +130,31 @@ void Sprite::State::ImageSet::AddImage(const std::string &iPath, const unsigned 
     m_TotalDuration += iDuration;
 }
 
-bool Sprite::State::ImageSet::LoadAllFromPaths()
+bool Sprite::State::ImageSet::LoadAllFromPaths(unsigned int &oWidth, unsigned int &oHeight)
 {
     if(m_Durations.size() != m_InputPaths.size())
         return false; // Should never happen
 
     bool everythingWentFine = true;
+    oWidth = 0;
+    oHeight = 0;
 
     for(unsigned int i = 0; i < m_InputPaths.size(); i++)
     {
         ImageFromFileOperator imageFromFileOper;
         imageFromFileOper.SetRelativePath(m_InputPaths[i]);
+        
         if (imageFromFileOper.Run(false) != KDBData::Error::OK)
+            everythingWentFine = false;
+
+        m_pData.push_back(imageFromFileOper.GetData());
+
+        if (i == 0)
+        {
+            oHeight = imageFromFileOper.GetHeight();
+            oWidth = imageFromFileOper.GetWidth();
+        }
+        else if(oHeight != imageFromFileOper.GetHeight() || oWidth != imageFromFileOper.GetWidth())
             everythingWentFine = false;
     }
 

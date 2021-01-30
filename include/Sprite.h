@@ -33,7 +33,7 @@ public:
 
         public:
             void AddImage(const std::string &iPath, const unsigned int iDuration);
-            bool LoadAllFromPaths();
+            bool LoadAllFromPaths(unsigned int &oWidth, unsigned int &oHeight);
 
         public:
             const unsigned char* GetImgData(unsigned int iTime) const;
@@ -47,7 +47,7 @@ public:
 
     public:
         void AddImageSet(const ImageSet &iImageSet);
-        bool LoadAllFromPaths();
+        bool LoadAllFromPaths(unsigned int &oWidth, unsigned int &oHeight);
 
     public:
         const ImageSet *GetImageSet(CType iObjectX, CType iObjectY, CType iPlayerX, CType iPlayerY) const;
