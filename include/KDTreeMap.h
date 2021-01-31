@@ -136,6 +136,9 @@ public:
     void UnStream(const char *ipData, unsigned int &oNbBytesRead);
 
 public:
+    void ComputeDynamicColorPalettes();
+
+public:
     CType GetPlayerStartX() const;
     CType GetPlayerStartY() const;
     int GetPlayerStartDirection() const;
@@ -158,6 +161,8 @@ protected:
     int m_PlayerStartDirection;
 
     unsigned int m_ColorPalette[256];
+
+    unsigned int m_DynamicColorPalettes[16][256];
 
 private:
     friend class KDTreeBuilder;

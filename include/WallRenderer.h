@@ -165,7 +165,7 @@ void WallRenderer::RenderColumnWithTexture(CType iT, int iMinVertexLight, int iM
                                            int iTexelXClamped, CType iMinTexelY, CType iMaxTexelY)
 {
     unsigned int light = static_cast<int>((iMinVertexLight * (1 - iT)) + iT * iMaxVertexLight);
-    const uint32_t *pPalette = m_Map.m_ColorPalette;
+    const uint32_t *pPalette = m_Map.m_DynamicColorPalettes[light >> 4u];
 
     CType tY, texelY = iMinTexelY;
     int texelYClamped;
@@ -183,17 +183,9 @@ void WallRenderer::RenderColumnWithTexture(CType iT, int iMinVertexLight, int iM
         texelYClamped = texelY - ((texelY >> (m_YModShift)) << (m_YModShift));
         textureIdxY = textureIdxX + texelYClamped;
 
-        // r = m_pTexture->m_pData[textureIdxY];
-        // g = m_pTexture->m_pData[textureIdxY + 1];
-        // b = m_pTexture->m_pData[textureIdxY + 2];
         src = &pPalette[m_pTexture->m_pData[textureIdxY]];
         *dest = *src;
         dest -= WINDOW_WIDTH;
-
-        // TODO: get rid of integer multiplications (way too expensive), use CLUT instead
-        // Well, current hardware doesn't support palette as far as I know, so a CLUT might slow things down actually
-        // WriteFrameBuffer(frameBuffIdx, (light * r) >> 8u, (light * g) >> 8u, (light * b) >> 8u);
-        // frameBuffIdx -= WINDOW_WIDTH;
     }
 }
 

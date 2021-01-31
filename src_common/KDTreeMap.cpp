@@ -341,6 +341,8 @@ void KDTreeMap::UnStream(const char *iData, unsigned int &oNbBytesRead)
         m_RootNode->UnStream(iData, nbBytesRead);
         oNbBytesRead += nbBytesRead;
     }
+
+    ComputeDynamicColorPalettes();
 }
 
 unsigned int KDTreeMap::ComputeStreamSize() const
@@ -396,4 +398,25 @@ int KDTreeMap::ComputeDepth() const
         return m_RootNode->ComputeDepth();
     else
         return 0;
+}
+
+void KDTreeMap::ComputeDynamicColorPalettes()
+{
+    for (unsigned int i = 0; i < 256; i++)
+    {
+        unsigned int factor = 15u;
+        for (unsigned int j = 0; j < 16; j++)
+        {
+            const unsigned char *pSrcColPtr = reinterpret_cast<const unsigned char *>(&m_ColorPalette[i]);
+            unsigned char *pDestColPtr = reinterpret_cast<unsigned char *>(&m_DynamicColorPalettes[j][i]);
+            for(unsigned int k = 0; k < 3; k++)
+            {
+                unsigned int srcComp = static_cast<unsigned int>(*pSrcColPtr++);
+                unsigned int destComp = (srcComp * factor) >> 8u;
+                *pDestColPtr++ = destComp;
+            }
+            *pDestColPtr = 255u;
+            factor += 15u;
+        }
+    }
 }

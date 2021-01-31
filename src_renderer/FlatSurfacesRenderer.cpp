@@ -206,7 +206,7 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
 
         if (iSurface.m_TexId >= 0)
         {
-            const uint32_t *pPalette = m_Map.m_ColorPalette;
+            const uint32_t *pPalette = m_Map.m_DynamicColorPalettes[light >> 4u];
             const KDMapData::Texture &texture = m_Map.m_Textures[iSurface.m_TexId];
 
             CType currTexelX = leftmostTexel.m_X + CType(iMinX) * deltaTexelX;
@@ -226,19 +226,9 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
                 currTexelXClamped = currTexelX - ((currTexelX >> (xModShift)) << (xModShift));
                 currTexelYClamped = currTexelY - ((currTexelY >> (yModShift)) << (yModShift));
 
-                // I let the compiler optimize this (more efficient than my own optim)
                 texIdx = (currTexelXClamped << texture.m_Height) + currTexelYClamped;
-                // r = texture.m_pData[texIdx];
-                // g = texture.m_pData[texIdx + 1];
-                // b = texture.m_pData[texIdx + 2];
                 src = &pPalette[texture.m_pData[texIdx]];
                 *dest++ = *src;
-
-                // r = m_RDbg == 0 ? r : m_RDbg;
-                // g = m_GDbg == 0 ? g : m_GDbg;
-                // b = m_BDbg == 0 ? b : m_BDbg;
-
-                // WriteFrameBuffer(xOffsetFrameBuffer++, (light * r) >> 8u, (light * g) >> 8u, (light * b) >> 8u);
 
                 currTexelX = currTexelX + deltaTexelX;
                 currTexelY = currTexelY + deltaTexelY;
