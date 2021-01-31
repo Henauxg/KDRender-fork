@@ -205,6 +205,9 @@ void KDTreeMap::Stream(char *&oData, unsigned int &oSize) const
         *(reinterpret_cast<int *>(pData)) = m_PlayerStartDirection;
         pData += sizeof(int);
 
+        memcpy(pData, m_ColorPalette, sizeof(m_ColorPalette));
+        pData += sizeof(m_ColorPalette);
+
         *(reinterpret_cast<unsigned int *>(pData)) = m_Textures.size();
         pData += sizeof(unsigned int);
 
@@ -271,6 +274,9 @@ void KDTreeMap::UnStream(const char *iData, unsigned int &oNbBytesRead)
 
     m_PlayerStartDirection = *(reinterpret_cast<const int *>(iData));
     iData += sizeof(int);
+
+    memcpy(m_ColorPalette, iData, sizeof(m_ColorPalette));
+    iData += sizeof(m_ColorPalette);
 
     unsigned nbTextures = *(reinterpret_cast<const int *>(iData));
     iData += sizeof(int);
@@ -342,6 +348,8 @@ unsigned int KDTreeMap::ComputeStreamSize() const
     unsigned int streamSize = 0;
 
     streamSize += 3 * sizeof(int); // m_PlayerStartX, m_PlayerStartY, m_PlayerStartDirection
+
+    streamSize += sizeof(m_ColorPalette);
 
     streamSize += sizeof(unsigned int); // m_Textures.size()
 

@@ -138,21 +138,23 @@ bool Sprite::State::ImageSet::LoadAllFromPaths(unsigned int &oWidth, unsigned in
 
     for(unsigned int i = 0; i < m_InputPaths.size(); i++)
     {
-        ImageFromFileOperator imageFromFileOper;
-        imageFromFileOper.SetRelativePath(m_InputPaths[i]);
+        // TODO palette
+
+        // ImageFromFileOperator imageFromFileOper;
+        // imageFromFileOper.SetRelativePath(m_InputPaths[i]);
         
-        if (imageFromFileOper.Run(false) != KDBData::Error::OK)
-            everythingWentFine = false;
+        // if (imageFromFileOper.Run(false) != KDBData::Error::OK)
+        //     everythingWentFine = false;
 
-        m_pData.push_back(imageFromFileOper.GetData());
+        // m_pData.push_back(imageFromFileOper.GetData());
 
-        if (i == 0)
-        {
-            oHeight = imageFromFileOper.GetHeight();
-            oWidth = imageFromFileOper.GetWidth();
-        }
-        else if(oHeight != imageFromFileOper.GetHeight() || oWidth != imageFromFileOper.GetWidth())
-            everythingWentFine = false;
+        // if (i == 0)
+        // {
+        //     oHeight = imageFromFileOper.GetHeight();
+        //     oWidth = imageFromFileOper.GetWidth();
+        // }
+        // else if(oHeight != imageFromFileOper.GetHeight() || oWidth != imageFromFileOper.GetWidth())
+        //     everythingWentFine = false;
     }
 
     return everythingWentFine;

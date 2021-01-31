@@ -4,10 +4,11 @@
 // work anyway (need to use an antiquated version of libpng + cryptic compile errors)
 #include <SFML/Graphics.hpp>
 
-ImageFromFileOperator::ImageFromFileOperator() : 
+ImageFromFileOperator::ImageFromFileOperator(std::map<unsigned int, unsigned char> &ioPalette) : 
     m_Height(0),
     m_Width(0),
-    m_pData(nullptr)
+    m_pData(nullptr),
+    m_Palette(ioPalette)
 {
 }
 
@@ -40,7 +41,7 @@ KDBData::Error ImageFromFileOperator::Run(bool iIsTexture)
         m_Height = image.getSize().y;
         m_Width = image.getSize().x;
 
-        m_pData = new unsigned char[sizeof(uint32_t) * m_Width * m_Height];
+        m_pData = new unsigned char[m_Width * m_Height];
         if(m_pData)
         {
             for (unsigned int x = 0; x < m_Width; x++)
@@ -51,10 +52,29 @@ KDBData::Error ImageFromFileOperator::Run(bool iIsTexture)
                     // This avoids cache-misses when texturing the walls (for the floors/ceiling,
                     // the orientation doesn't matter)
                     sf::Color c = image.getPixel(x, y);
-                    m_pData[x * 4u * m_Height + y * 4u + 0] = c.r;
-                    m_pData[x * 4u * m_Height + y * 4u + 1] = c.g;
-                    m_pData[x * 4u * m_Height + y * 4u + 2] = c.b;
-                    m_pData[x * 4u * m_Height + y * 4u + 3] = c.a;
+                    unsigned int cint32 = 0;
+                    unsigned char *pColPtr = reinterpret_cast<unsigned char *>(&cint32);
+                    *pColPtr++ = c.r;
+                    *pColPtr++ = c.g;
+                    *pColPtr++ = c.b;
+                    *pColPtr = 255u;
+
+                    unsigned char cint8;
+                    auto found = m_Palette.find(cint32);
+                    if(found != m_Palette.end())
+                        cint8 = found->second;
+                    else
+                    {
+                        if(m_Palette.size() >= 256)
+                            cint8 = 0; // TODO find closest color in palette instead of returning 0
+                        else
+                        {
+                            cint8 = m_Palette.size();
+                            m_Palette[cint32] = cint8;
+                        }
+                    }
+
+                    m_pData[x * m_Height + y] = cint8;
                 }
             }
         }

@@ -9,10 +9,12 @@
 
 #include <vector>
 #include <list>
+#include <map>
 #include <iterator>
 #include <memory>
 #include <algorithm>
 #include <climits>
+#include <cstring>
 
 KDBData::Error KDTreeBuilder::BuildSectors(const Map &iMap)
 {
@@ -195,11 +197,12 @@ KDBData::Error KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
         return KDBData::Error::UNKNOWN_FAILURE;
 
     // Load textures first
+    std::map<unsigned int, unsigned char> palette;
     for (unsigned int i = 0; i < m_Map.GetData().m_Textures.size(); i++)
     {
         const Map::Data::Texture &textureInfos(m_Map.GetData().m_Textures[i]);
 
-        ImageFromFileOperator imgFromFileOper;
+        ImageFromFileOperator imgFromFileOper(palette);
         imgFromFileOper.SetRelativePath(textureInfos.m_Path);
         KDBData::Error localError = imgFromFileOper.Run();
         
@@ -263,6 +266,18 @@ KDBData::Error KDTreeBuilder::BuildKDTree(KDTreeMap *&oKDTree)
                 std::list<KDBData::Wall> allWallsList(allWalls.begin(), allWalls.end());
                 allWalls.clear();
                 ret = RecursiveBuildKDTree(allWallsList, KDTreeNode::SplitPlane::XConst, oKDTree->m_RootNode);
+
+                // Build color palette
+                if(ret == KDBData::Error::OK)
+                {
+                    memset(oKDTree->m_ColorPalette, 0u, sizeof(oKDTree->m_ColorPalette));
+                    for(const auto &key : palette)
+                    {
+                        unsigned int cint32 = key.first;
+                        unsigned int cint8 = key.second;
+                        oKDTree->m_ColorPalette[cint8] = cint32;
+                    }
+                }
             }
         }
     }

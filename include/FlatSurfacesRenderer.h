@@ -19,7 +19,7 @@ public:
     void Render();
 
 protected:
-    void DrawLine(int iY, int iMinX, int iMaxX, const KDRData::FlatSurface &iSurface);
+    inline void DrawLine(int iY, int iMinX, int iMaxX, const KDRData::FlatSurface &iSurface);
     inline void WriteFrameBuffer(unsigned int idx, unsigned char r, unsigned char g, unsigned char b);
 
 protected:

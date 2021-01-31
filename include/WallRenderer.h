@@ -165,26 +165,35 @@ void WallRenderer::RenderColumnWithTexture(CType iT, int iMinVertexLight, int iM
                                            int iTexelXClamped, CType iMinTexelY, CType iMaxTexelY)
 {
     unsigned int light = static_cast<int>((iMinVertexLight * (1 - iT)) + iT * iMaxVertexLight);
+    const uint32_t *pPalette = m_Map.m_ColorPalette;
+
     CType tY, texelY = iMinTexelY;
     int texelYClamped;
     CType deltaTexelY = iMaxY == iMinY ? CType(1) : (iMaxTexelY - iMinTexelY) / CType(iMaxY - iMinY);
 
-    unsigned int textureIdxX = iTexelXClamped << (m_pTexture->m_Height + 2u);
+    unsigned int frameBuffIdx = (WINDOW_HEIGHT - 1 - iMinY) * WINDOW_WIDTH + iX;
+    unsigned int textureIdxX = iTexelXClamped << m_pTexture->m_Height;
     unsigned int textureIdxY;
     unsigned int r, g, b;
-    for (unsigned int y = iMinY; y <= iMaxY; y++)
+    const uint32_t *src;
+    uint32_t *dest = reinterpret_cast<uint32_t *>(m_pFrameBuffer) + frameBuffIdx;
+    for (unsigned int y = iMaxY - iMinY + 1; y; --y)
     {
         texelY = texelY + deltaTexelY;
         texelYClamped = texelY - ((texelY >> (m_YModShift)) << (m_YModShift));
-        textureIdxY = textureIdxX + (texelYClamped << 2u);
+        textureIdxY = textureIdxX + texelYClamped;
 
-        r = m_pTexture->m_pData[textureIdxY];
-        g = m_pTexture->m_pData[textureIdxY + 1];
-        b = m_pTexture->m_pData[textureIdxY + 2];
+        // r = m_pTexture->m_pData[textureIdxY];
+        // g = m_pTexture->m_pData[textureIdxY + 1];
+        // b = m_pTexture->m_pData[textureIdxY + 2];
+        src = &pPalette[m_pTexture->m_pData[textureIdxY]];
+        *dest = *src;
+        dest -= WINDOW_WIDTH;
 
         // TODO: get rid of integer multiplications (way too expensive), use CLUT instead
         // Well, current hardware doesn't support palette as far as I know, so a CLUT might slow things down actually
-        WriteFrameBuffer((WINDOW_HEIGHT - 1 - y) * WINDOW_WIDTH + iX, (light * r) >> 8u, (light * g) >> 8u, (light * b) >> 8u);
+        // WriteFrameBuffer(frameBuffIdx, (light * r) >> 8u, (light * g) >> 8u, (light * b) >> 8u);
+        // frameBuffIdx -= WINDOW_WIDTH;
     }
 }
 

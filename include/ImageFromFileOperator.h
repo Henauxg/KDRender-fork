@@ -4,11 +4,12 @@
 #include "KDTreeBuilderData.h"
 
 #include <string>
+#include <map>
 
 class ImageFromFileOperator
 {
 public:
-    ImageFromFileOperator();
+    ImageFromFileOperator(std::map<unsigned int, unsigned char> &ioPalette);
     virtual ~ImageFromFileOperator();
 
 public:
@@ -25,6 +26,7 @@ public:
 
 protected:
     std::string m_RelativePath;
+    std::map<unsigned int, unsigned char> &m_Palette;
 
     // Output data
     unsigned int m_Height;

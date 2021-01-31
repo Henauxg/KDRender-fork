@@ -157,6 +157,8 @@ protected:
     int m_PlayerStartY;
     int m_PlayerStartDirection;
 
+    unsigned int m_ColorPalette[256];
+
 private:
     friend class KDTreeBuilder;
     friend class KDTreeRenderer;
