@@ -80,6 +80,7 @@ int main(int argc, char **argv)
 
     unsigned int poolEvent = 0;
     unsigned int showFPS = 0;
+    sf::Clock fpsClock;
 
     double totalTime = 0.0;
     int64_t frameCount = 0;
@@ -185,9 +186,12 @@ int main(int argc, char **argv)
         // }
 
         // if (1000.f / deltaT < 60.f)
+        const int fpsStep = 100;
         if (showFPS++ % 100 == 0)
         {
-            std::cout << "FPS = " << 1000.f / deltaT << std::endl;
+            float deltaTFps = (float)(fpsClock.getElapsedTime().asMilliseconds());
+            std::cout << "FPS = " << (1000.f * static_cast<float>(fpsStep)) / deltaTFps << std::endl;
+            fpsClock.restart();
         }
 
         frameCount++;
