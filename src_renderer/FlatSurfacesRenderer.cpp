@@ -43,7 +43,7 @@ void FlatSurfacesRenderer::Render()
         const std::vector<KDRData::FlatSurface> &currentSurfaces = keyVal.second;
 
         for (unsigned int i = 0; i < WINDOW_HEIGHT; i++)
-            m_DistYCache[i] = -1;
+            m_PaletteCache[i] = -1;
 
         for (unsigned int i = 0; i < currentSurfaces.size(); i++)
         {
@@ -153,24 +153,28 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
     if(iY == WINDOW_HEIGHT / 2)
         return;
 
-    CType dist = -1;
+    char palette;
     CType deltaTexelX, deltaTexelY;
     KDRData::Vertex leftmostTexel;
     int light;
     unsigned int lightClamped;
 
-    if (m_DistYCache[iY] >= 0)
+    if (m_PaletteCache[iY] >= 0)
     {
-        dist = m_DistYCache[iY];
+        palette = m_PaletteCache[iY];
         leftmostTexel = m_LeftmostTexelCache[iY];
         deltaTexelX = m_DeltaTexelXCache[iY];
         deltaTexelY = m_DeltaTexelYCache[iY];
     }
     else
     {
-        dist = m_Settings.m_VerticalDistortionCst * ((m_State.m_PlayerZ - iSurface.m_Height) / (CType(iY) / WINDOW_HEIGHT - CType(1) / CType(2)));
+        CType dist = m_Settings.m_VerticalDistortionCst * ((m_State.m_PlayerZ - iSurface.m_Height) / (CType(iY) / WINDOW_HEIGHT - CType(1) / CType(2)));
         dist = dist < 0 ? -dist : dist;
-        m_DistYCache[iY] = dist;
+
+        int light = ((m_MaxColorInterpolationDist - dist) * m_MaxLight) / m_MaxColorInterpolationDist;
+        light = Clamp(light, m_MinLight, m_MaxLight);
+        palette = light >> 4u;
+        m_PaletteCache[iY] = palette;
 
         const KDMapData::Texture &texture = m_Map.m_Textures[iSurface.m_TexId];
         CType length = dist / cosInt(m_Settings.m_PlayerHorizontalFOV / 2);
@@ -197,16 +201,15 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
         m_DeltaTexelYCache[iY] = deltaTexelY;
     }
 
-    if (dist >= 0)
+    if (palette >= 0)
     {
         unsigned int xOffsetFrameBuffer = (WINDOW_HEIGHT - 1 - iY) * WINDOW_WIDTH + iMinX;
         // m_MinVertexColor = ((maxColorInterpolationDist - m_MinDist) * maxLightVal) / maxColorInterpolationDist;
-        int light = ((m_MaxColorInterpolationDist - dist) * m_MaxLight) / m_MaxColorInterpolationDist;
-        light = Clamp(light, m_MinLight, m_MaxLight);
+        
 
         if (iSurface.m_TexId >= 0)
         {
-            const uint32_t *pPalette = m_Map.m_DynamicColorPalettes[light >> 4u];
+            const uint32_t *pPalette = m_Map.m_DynamicColorPalettes[palette];
             const KDMapData::Texture &texture = m_Map.m_Textures[iSurface.m_TexId];
 
             CType currTexelX = leftmostTexel.m_X + CType(iMinX) * deltaTexelX;
@@ -233,11 +236,6 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
                 currTexelX = currTexelX + deltaTexelX;
                 currTexelY = currTexelY + deltaTexelY;
             }
-        }
-        else
-        {
-            for (int x = iMinX; x <= iMaxX; ++x)
-                WriteFrameBuffer(xOffsetFrameBuffer++, (light * m_CurrSectorR) >> 8u, (light * m_CurrSectorG) >> 8u, (light * m_CurrSectorB) >> 8u);
         }
     }
 }

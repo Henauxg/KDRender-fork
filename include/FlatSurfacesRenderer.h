@@ -41,7 +41,7 @@ protected:
 
     // Caches
     int m_LinesXStart[WINDOW_HEIGHT];
-    CType m_DistYCache[WINDOW_HEIGHT];
+    char m_PaletteCache[WINDOW_HEIGHT];
     KDRData::Vertex m_LeftmostTexelCache[WINDOW_HEIGHT];
     CType m_DeltaTexelYCache[WINDOW_HEIGHT];
     CType m_DeltaTexelXCache[WINDOW_HEIGHT];
