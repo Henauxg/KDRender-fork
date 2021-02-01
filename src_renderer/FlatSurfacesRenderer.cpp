@@ -168,7 +168,11 @@ void FlatSurfacesRenderer::DrawLine(int iY, int iMinX, int iMaxX, const KDRData:
     }
     else
     {
-        CType dist = m_Settings.m_VerticalDistortionCst * ((m_State.m_PlayerZ - iSurface.m_Height) / (CType(iY) / WINDOW_HEIGHT - CType(1) / CType(2)));
+        CType den = (CType(iY) / WINDOW_HEIGHT - CType(1) / CType(2));
+        if(!den)
+            return;
+        
+        CType dist = m_Settings.m_VerticalDistortionCst * ((m_State.m_PlayerZ - iSurface.m_Height) / den);
         dist = dist < 0 ? -dist : dist;
 
         int light = ((m_MaxColorInterpolationDist - dist) * m_MaxLight) / m_MaxColorInterpolationDist;
