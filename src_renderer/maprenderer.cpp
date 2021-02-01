@@ -81,8 +81,9 @@ int main(int argc, char **argv)
     unsigned int poolEvent = 0;
     unsigned int showFPS = 0;
     sf::Clock fpsClock;
+    sf::Clock totalClock;
+    totalClock.restart();
 
-    double totalTime = 0.0;
     int64_t frameCount = 0;
     while (app.isOpen())
     {
@@ -175,7 +176,6 @@ int main(int argc, char **argv)
         }
 
         float deltaT = (float)(clock.getElapsedTime().asMilliseconds());
-        totalTime += deltaT;
         clock.restart();
 
         // 60 FPS cap
@@ -187,7 +187,7 @@ int main(int argc, char **argv)
 
         // if (1000.f / deltaT < 60.f)
         const int fpsStep = 100;
-        if (showFPS++ % 100 == 0)
+        if (showFPS++ % fpsStep == 0)
         {
             float deltaTFps = (float)(fpsClock.getElapsedTime().asMilliseconds());
             std::cout << "FPS = " << (1000.f * static_cast<float>(fpsStep)) / deltaTFps << std::endl;
@@ -227,7 +227,7 @@ int main(int argc, char **argv)
     }
 
     // Shitty average, should be weighted by time and not framecount
-    double averageFps = static_cast<double>(frameCount) / totalTime * 1000.0;
+    double averageFps = static_cast<double>(frameCount) / (double)(totalClock.getElapsedTime().asMilliseconds()) *1000.0;
     std::cout << "Average FPS = " << averageFps << std::endl;
 
     return 0;
