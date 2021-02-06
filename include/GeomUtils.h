@@ -1,6 +1,13 @@
 #ifndef GeomUtils_h
 #define GeomUtils_h
 
+#ifdef __EXPERIMENGINE__
+#ifndef M_PI
+#include <numbers>
+#define M_PI std::numbers::pi
+#endif
+#endif
+
 #include <cmath>
 #include <algorithm>
 #include <cstdint>
