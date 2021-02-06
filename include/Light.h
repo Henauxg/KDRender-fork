@@ -3,7 +3,11 @@
 
 #include "Consts.h"
 
+#ifdef __EXPERIMENGINE__
+#include <engine/utils/Timer.hpp>
+#else
 #include <SFML/System.hpp>
+#endif
 
 // Abstract light class
 class Light
@@ -53,8 +57,8 @@ public:
 
 public:
     virtual unsigned int ComputeStreamSize() const override;
-    virtual void Stream(char *&ioData, unsigned int &oNbBytesWritten) const override;
-    virtual void UnStream(const char *ipData, unsigned int &oNbBytesRead) override;
+    virtual void Stream(char*& ioData, unsigned int& oNbBytesWritten) const override;
+    virtual void UnStream(const char* ipData, unsigned int& oNbBytesRead) override;
 
 public:
     virtual unsigned int GetValue() const override;
@@ -73,8 +77,8 @@ public:
 
 public:
     virtual unsigned int ComputeStreamSize() const override;
-    virtual void Stream(char *&ioData, unsigned int &oNbBytesWritten) const override;
-    virtual void UnStream(const char *ipData, unsigned int &oNbBytesRead) override;
+    virtual void Stream(char*& ioData, unsigned int& oNbBytesWritten) const override;
+    virtual void UnStream(const char* ipData, unsigned int& oNbBytesRead) override;
 
 public:
     virtual unsigned int GetValue() const override;
@@ -82,7 +86,12 @@ public:
 protected:
     unsigned int m_Low;
     unsigned int m_High;
+
+#ifdef __EXPERIMENGINE__
+    expengine::Timer m_Clock;
+#else
     sf::Clock m_Clock;
+#endif
 };
 
 #endif

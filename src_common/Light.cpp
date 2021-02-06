@@ -116,7 +116,9 @@ FlickeringLight::FlickeringLight(unsigned int iLow, unsigned int iHigh):
     m_Low(iLow),
     m_High(iHigh)
 {
+#ifndef __EXPERIMENGINE__
     m_Clock.restart();
+#endif
 }
 
 FlickeringLight::~FlickeringLight()
@@ -158,7 +160,12 @@ void FlickeringLight::UnStream(const char *ipData, unsigned int &oNbBytesRead)
 
 unsigned int FlickeringLight::GetValue() const
 {
+#ifdef __EXPERIMENGINE__
+    int elapsedTime = static_cast<int>(m_Clock.getElapsedTime()) % 4000;
+#else
     int elapsedTime = m_Clock.getElapsedTime().asMilliseconds() % 4000;
+#endif
+
     unsigned int val = m_Low;
 
     if (elapsedTime <= 100)
