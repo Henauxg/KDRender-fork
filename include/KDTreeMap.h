@@ -77,7 +77,10 @@ public:
 public:
     SplitPlane GetSplitPlane() const { return m_SplitPlane; }
     int GetSplitOffset() const { return m_SplitOffset; }
-    unsigned int GetNbOfWalls() const { return m_Walls.size(); }
+    unsigned int GetNbOfWalls() const
+    {
+        return static_cast<unsigned int>(m_Walls.size());
+    }
     const KDMapData::Wall *GetWall(unsigned int iWallIdx) const { return &m_Walls[iWallIdx]; }
     void GetAABB(KDMapData::Vertex &oAABBMin, KDMapData::Vertex &oAABBMax) const;
 

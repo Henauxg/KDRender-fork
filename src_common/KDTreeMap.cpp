@@ -47,7 +47,8 @@ void KDTreeNode::Stream(char *&ioData, unsigned int &oNbBytesWritten) const
     if (!ioData)
         return;
 
-    *(reinterpret_cast<unsigned int *>(ioData)) = m_Walls.size();
+    *(reinterpret_cast<unsigned int*>(ioData))
+        = static_cast<unsigned int>(m_Walls.size());
     ioData += sizeof(unsigned int);
 
     for (unsigned int i = 0; i < m_Walls.size(); i++)

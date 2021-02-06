@@ -163,8 +163,8 @@ KDBData::Error KDTreeBuilder::BuildPolygon(const Map::Data::Sector::Polygon &iPo
         // The map designer had direct orientation in mind, which is why we
         // must be careful when reporting the texture coordinate from the current
         // vertex to the matching wall
-        int i = iPolygon.size() - 2;
-        for (KDBData::Wall &wall : oWalls)
+        int i = static_cast<int>(iPolygon.size()) - 2;
+        for (KDBData::Wall& wall : oWalls)
         {
             i = i == -1 ? iPolygon.size() - 1 : i;
             wall.m_TexId = iPolygon[i].m_TexId;

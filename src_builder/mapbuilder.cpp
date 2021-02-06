@@ -11,8 +11,8 @@ int main(int argc, char **argv)
     std::string iFilePath;
     std::string oFilePath;
     bool displayHelpAndExit = false;
-    
-    for(unsigned int i = 1; i < argc; i++)
+
+    for (unsigned int i = 1; i < static_cast<unsigned int>(argc); i++)
     {
         if("-i" == std::string(argv[i]))
         {
