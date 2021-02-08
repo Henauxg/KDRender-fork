@@ -10,6 +10,7 @@
 #include <engine/utils/Timer.hpp>
 #include <engine/utils/Utils.hpp>
 #include <engine/Engine.hpp>
+#include <SDL2/SDL_events.h>
 #else
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/Graphics/Drawable.hpp>
@@ -36,7 +37,10 @@ class MapRenderer {
 public:
 	MapRenderer() = default;
 	int run(int argc, char** argv);
-	void tick(float deltaT);
+	void onTick(float deltaT);
+#ifdef __EXPERIMENGINE__
+	void onEvent(SDL_Event event);
+#endif
 
 private:
 	KDTreeMap m_Map;
@@ -105,6 +109,7 @@ int MapRenderer::run(int argc, char** argv)
 #ifdef __EXPERIMENGINE__
 	m_Engine = std::make_unique<experim::Engine>(APPLICATION_NAME, APPLICATION_VERSION);
 	m_Engine->onTick(this);
+	m_Engine->onEvent(this);
 	experim::Timer totalClock;
 
 	// Main loop
@@ -122,7 +127,28 @@ int MapRenderer::run(int argc, char** argv)
 	// Main loop
 	while (app.isOpen())
 	{
-		tick();
+		float deltaT = (float)(m_Clock.getElapsedTime().asMilliseconds());
+		m_Clock.restart();
+
+#if 0
+		// 60 FPS cap
+		if (deltaT < (1000.f / 60.f))
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(1000.f / 60.f - deltaT)));
+			deltaT += (float)(m_Clock.getElapsedTime().asMilliseconds());
+		}
+#endif
+
+		// if (1000.f / deltaT < 60.f)
+		const int fpsStep = 100;
+		if (showFPS++ % fpsStep == 0)
+		{
+			float deltaTFps = (float)(m_FpsClock.getElapsedTime().asMilliseconds());
+			std::cout << "FPS = " << (1000.f * static_cast<float>(fpsStep)) / deltaTFps << std::endl;
+			m_FpsClock.restart();
+		}
+
+		onTick(deltaT);
 	}
 
 	double totalElapsedMs = totalClock.getElapsedTime().asMilliseconds();
@@ -135,7 +161,21 @@ int MapRenderer::run(int argc, char** argv)
 	return EXIT_SUCCESS;
 }
 
-void MapRenderer::tick(float deltaT)
+#ifdef __EXPERIMENGINE__
+void MapRenderer::onEvent(SDL_Event event)
+{
+	if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_s)
+	{
+		SPDLOG_INFO("Dumping player info : x = {} y = {} dir = {} ({}°)",
+			m_PlayerPos.m_X * POSITION_SCALE,
+			m_PlayerPos.m_Y * POSITION_SCALE,
+			m_playerDir,
+			static_cast<float>(m_playerDir) / (1 << ANGLE_SHIFT));
+	}
+}
+#endif
+
+void MapRenderer::onTick(float deltaT)
 {
 	static unsigned int showFPS = 0;
 	static const CType dr(180.f / POSITION_SCALE);
@@ -150,8 +190,24 @@ void MapRenderer::tick(float deltaT)
 	int slowDown = 0;
 	unsigned int poolEvent = 0;
 
-	sf::Event event;
-
+#ifdef __EXPERIMENGINE__
+	// No event handling wrapper provided by Expengine, directly use the SDL
+	const uint8_t* keyboard = SDL_GetKeyboardState(nullptr);
+	if (keyboard[SDL_SCANCODE_O])
+		directionFront = 1;
+	if (keyboard[SDL_SCANCODE_L])
+		directionBack = -1;
+	if (keyboard[SDL_SCANCODE_K])
+		directionRight = -1;
+	if (keyboard[SDL_SCANCODE_M])
+		directionLeft = 1;
+	if (keyboard[SDL_SCANCODE_Q])
+		directionStrafeRight = -1;
+	if (keyboard[SDL_SCANCODE_D])
+		directionStrafeLeft = 1;
+	if (keyboard[SDL_SCANCODE_LSHIFT])
+		slowDown = 8;
+#else
 	m_Screen->refresh();
 	app.draw(m_Screen);
 	app.display();
@@ -214,6 +270,7 @@ void MapRenderer::tick(float deltaT)
 		slowDown = 0;
 	}
 
+	sf::Event event;
 	// if(poolEvent++ % 20 == 0)
 	{
 		while (app.pollEvent(event))
@@ -236,30 +293,6 @@ void MapRenderer::tick(float deltaT)
 				break;
 			}
 		}
-	}
-
-#ifndef __EXPERIMENGINE__
-	float deltaT = (float)(m_Clock.getElapsedTime().asMilliseconds());
-	m_Clock.restart();
-#endif
-
-#if 0
-	// 60 FPS cap
-	if (deltaT < (1000.f / 60.f))
-	{
-		std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(1000.f / 60.f - deltaT)));
-		deltaT += (float)(m_Clock.getElapsedTime().asMilliseconds());
-	}
-#endif
-
-#ifndef __EXPERIMENGINE__
-	// if (1000.f / deltaT < 60.f)
-	const int fpsStep = 100;
-	if (showFPS++ % fpsStep == 0)
-	{
-		float deltaTFps = (float)(m_FpsClock.getElapsedTime().asMilliseconds());
-		std::cout << "FPS = " << (1000.f * static_cast<float>(fpsStep)) / deltaTFps << std::endl;
-		m_FpsClock.restart();
 	}
 #endif
 
